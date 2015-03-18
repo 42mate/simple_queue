@@ -1,0 +1,15 @@
+name = Simple queue
+description = Create a simple queues which can contain nodes in arbitrary order and management each queue and its nodes.
+package = 42mate
+core = 7.x
+
+version = "7.x-1.0"
+
+; Schema and Updates
+files[] = simple_queue.install
+
+files[] = simple_queue.module
+
+; Optional
+files[] = simple_queue.queue.admin.inc
+files[] = simple_queue.api.inc
