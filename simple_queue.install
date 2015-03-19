@@ -1,0 +1,150 @@
+<?php
+/**
+ * @author  
+ * Daniel Anzawa daniel@42mate.com.
+ * 
+ * @package 
+ * 42mate.
+ * 
+ * @file    
+ * Install, update and uninstall functions for the simple_queue module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function simple_queue_schema() {
+  $schema['simple_queue_queue'] = array(
+    'description' => 'Queues definition',
+    'fields' => array(
+      'qid' => array(
+        'description' => 'The primary identifier for a queue.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'name' => array(
+        'description' => 'The machine name of the queue, only leters, numbers and _ no white spaces. The machine name',
+        'type' => 'varchar',
+        'length' => 128,
+      ),
+      'title' => array(
+        'description' => 'Human readable name of the queue.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'size' => array(
+        'description' => 'Integer Max num of items of the queue, 0 means infinite',
+        'type' => 'int',
+        'default' => 0,
+      ),
+      'default_display' => array(
+        'description' => 'Name of a drupal display, like default and teaser. The default display for the node rendering in the queue.',
+        'type' => 'varchar',
+        'length' => '64',
+      ),
+      'direction' => array(
+        'description' => 'How the new nodes are going to be added to the queue. 0 means from top, 1 means from the bottom. Default add to top',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => 0,
+      ),
+    ), // fields.
+    'primary key' => array('qid'),
+    'unique keys' => array(
+      'name' => array('name'),
+    ),
+  ); // simple_queue_roles.
+  $schema['simple_queue_roles'] = array(
+    'description' => 'Roles that are allowed to handle the queue. Mandatory.',
+    'fields' => array(
+      'qid' => array(
+        'description' => 'Primary key for {simple_queue_queue}. ID of the queue',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'rid' => array(
+        'description' => 'Primary key for roles - ID of the role (drupal role).',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+    ), // fields.
+    'indexes' => array(
+      'qid' => array('qid'),
+      'rid' => array('rid'),
+    ), // indexes.
+  ); // simple_queue_types.
+  $schema['simple_queue_types'] = array(
+    'description' => 'Types allowed for the queue. Mandatory.',
+    'fields' => array(
+      'qid' => array(
+        'description' => 'Primary key for {simple_queue_queue}. ID of queue.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'type' => array(
+        'description' => 'Node Type',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => FALSE
+      ),
+    ), // fields.
+    'indexes' => array(
+      'qid' => array('qid'),
+      'type' => array('type'),
+    ), // indexes.
+  ); // simple_queue_types.
+
+  $schema['simple_queue_nodes'] = array(
+    'description' => 'Indicates which nodes are in which queues.',
+    'fields' => array(
+      'qid' => array(
+        'description' => 'Queue id',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),      
+      'nid' => array(
+        'description' => 'Node id in this queue',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE
+      ),
+      'position' => array(
+        'description' => 'Integer from 0 to max.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE
+      ),
+      'timestamp' => array(
+        'description' => "The time that the item's position in the queue was updated.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'display' => array(
+        'description' => 'How to display the node.',
+        'type' => 'varchar',
+        'length' => '64',
+      ),
+      'lock' => array(
+        'description' => 'Boolean indicating whether the node is lock. To default the node is not lock',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => 1,
+      ),
+    ), // fields.
+    'indexes' => array(
+      'nid' => array('nid'),
+      'qid_nid' => array('qid', 'nid'),
+    ), // indexes.
+  ); // simple_queue_nodes.
+
+  return $schema;
+}

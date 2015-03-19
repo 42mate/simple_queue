@@ -1,5 +1,5 @@
 name = Simple queue
-description = Create a simple queues which can contain nodes in arbitrary order and management each queue and its nodes.
+description = Create a simple queues which can contain nodes in arbitrary order and management each queue as its nodes.
 package = 42mate
 core = 7.x
 
