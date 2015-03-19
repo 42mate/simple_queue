@@ -12,6 +12,9 @@
 
 /**
  * Implements hook_schema().
+ * 
+ * @author  
+ * Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_schema() {
   $schema['simple_queue_queue'] = array(

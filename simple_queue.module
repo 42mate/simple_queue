@@ -10,3 +10,67 @@
  * Queues management.
  */
 
+// Constant variables for the permissions.
+define('PERMISSION_CREATE_QUEUES', 'create queues');
+define('PERMISSION_DELETE_QUEUES', 'delete queues');
+define('PERMISSION_EDIT_QUEUES', 'edit queues');
+define('PERMISSION_VIEW_ROLES_QUEUES', 'view roles queues');
+define('PERMISSION_EDIT_SAME_ROLES_QUEUES', 'edit same roles queues');
+define('PERMISSION_DELETE_SAME_ROLES_QUEUES', 'delete same roles queues');
+define('PERMISSION_VIEW_SAME_ROLES_QUEUES', 'view same roles queues');
+define('PERMISSION_ADD_NODES_QUEUES', 'add nodes queues');
+define('PERMISSION_ADD_NODES_SAME_ROLES_QUEUES', 'add nodes same roles queues');
+define('PERMISSION_LOCK_UNLOCK_NODES', 'lock unlock nodes');
+
+/* --- HOOKS ---------------------------------------------------------------- */
+
+/**
+ * Implements hook_permission().
+ * 
+ * @author  
+ * Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_permission() {
+  return array(
+    PERMISSION_CREATE_QUEUES => array(
+      'title' => t('Create queues'),
+      'description' => t('Can create queues.'),
+    ),
+    PERMISSION_DELETE_QUEUES => array(
+      'title' => t('Delete queues'),
+      'description' => t('Can delete all queues.'),
+    ),
+    PERMISSION_EDIT_QUEUES => array(
+      'title' => t('Edit queues'),
+      'description' => t('Can edit all queues.'),
+    ),
+    PERMISSION_VIEW_ROLES_QUEUES => array(
+      'title' => t('View roles queues'),
+      'description' => t('Can view all roles queues.'),
+    ),
+    PERMISSION_EDIT_SAME_ROLES_QUEUES => array(
+      'title' => t('Edit same roles queue'),
+      'description' => t('Can edit same roles queues.'),
+    ),
+    PERMISSION_DELETE_SAME_ROLES_QUEUES => array(
+      'title' => t('Delete same roles queues'),
+      'description' => t('Can delete same role queues.'),
+    ),
+    PERMISSION_VIEW_SAME_ROLES_QUEUES => array(
+      'title' => t('View same roles queues'),
+      'description' => t('Can view same roles queues.'),
+    ),
+    PERMISSION_ADD_NODES_QUEUES => array(
+      'title' => t('Add nodes queues'),
+      'description' => t('Can add nodes to queues.'),
+    ),
+    PERMISSION_ADD_NODES_SAME_ROLES_QUEUES => array(
+      'title' => t('Add nodes same roles queues'),
+      'description' => t('Can add nodes to same roles queues.'),
+    ),
+    PERMISSION_LOCK_UNLOCK_NODES => array(
+      'title' => t('Lock unlock nodes'),
+      'description' => t('Can lock / unlock nodes.'),
+    ),
+  );
+}
