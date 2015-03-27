@@ -1,20 +1,20 @@
 <?php
 /**
  * @author  
- * Daniel Anzawa daniel@42mate.com.
+ *   Daniel Anzawa daniel@42mate.com.
  * 
  * @package 
- * 42mate.
+ *   42mate.
  * 
  * @file    
- * Install, update and uninstall functions for the simple_queue module.
+ *   Install, update and uninstall functions for the simple_queue module.
  */
 
 /**
  * Implements hook_schema().
  * 
  * @author  
- * Daniel Anzawa daniel@42mate.com.
+ *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_schema() {
   $schema['simple_queue_queue'] = array(
