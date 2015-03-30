@@ -87,7 +87,7 @@ function simple_queue_permission() {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_menu() {  
+function simple_queue_menu() { 
   $items = array();
   
   // administrative items.
@@ -95,9 +95,8 @@ function simple_queue_menu() {
     'title' => 'Simple queues',
     'description' => 'Create and maintain simple nodequeues.',
     'page callback' => 'simple_queue_list_queues',
-    'access callback' => TRUE,
-  // 'access callback' => 'user_access',
-  // 'access arguments' => array(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES),    
+    'access callback' => 'simple_queue_access',
+    'access arguments' => array(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES),
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_NORMAL_ITEM,
   );  
@@ -105,9 +104,8 @@ function simple_queue_menu() {
     'title' => 'List',
     'description' => 'List all queues, for other story.',
     'page callback' => 'simple_queue_list_queues',        
-    'access callback' => TRUE,
-  // 'access callback' => 'user_access',
-  // 'access arguments' => array(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES),
+    'access callback' => 'simple_queue_access',
+    'access arguments' => array(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES),
     'weight' => -1,
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_DEFAULT_LOCAL_TASK,
@@ -117,7 +115,7 @@ function simple_queue_menu() {
     'description' => 'Add a new queue.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('simple_queue_edit_queue_form', 3),
-    'access callback' => 'user_access',
+    'access callback' => 'simple_queue_access',
     'access arguments' => array(SIMPLE_QUEUE_PERMISSION_ADD_QUEUES),
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_LOCAL_ACTION,
@@ -129,8 +127,8 @@ function simple_queue_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('simple_queue_edit_queue_form', 3),
     'load arguments' => array('%map'),
-    'access callback' => TRUE,
-  // 'access arguments' => array(PERMISSION_EDIT_QUEUES, PERMISSION_EDIT_SAME_ROLES_QUEUES),
+    'access callback' => 'simple_queue_access',
+    'access arguments' => array(SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES),
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
@@ -140,8 +138,8 @@ function simple_queue_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('simple_queue_admin_delete', 3),
     'load arguments' => array('%map'),
-    'access callback' => TRUE,
-  // 'access arguments' => array(PERMISSION_DELETE_QUEUES, PERMISSION_DELETE_SAME_ROLES_QUEUES),
+    'access callback' => 'simple_queue_access',
+    'access arguments' => array(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES),
     'file' => 'simple_queue.admin.inc',
     'weight' => 5,
     'type' => MENU_CALLBACK,
@@ -327,6 +325,107 @@ function simple_queue_delete($qid) {
   db_delete('simple_queue_nodes')
     ->condition('qid', $qid)
     ->execute();
+}
+
+/**
+ * Helper function - since hook_menu now takes a function instead of a boolean,
+ * this function is used to compute the user's access.
+ *
+ * @return 
+ *   boolean.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_access($permission) {
+  $access = FALSE;
+  switch ($permission) {
+    case SIMPLE_QUEUE_PERMISSION_LIST_QUEUES: 
+      if (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES)) {
+        $access = TRUE;
+      } 
+      else {
+        $access = simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES);
+      }
+      break;
+    
+    case SIMPLE_QUEUE_PERMISSION_ADD_QUEUES:
+      $access = simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_QUEUES);
+      break;
+    
+    case SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES:
+      if (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES)) {
+        $access = TRUE;
+      } 
+      else {
+        $access = simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES);
+      }
+      break;
+      
+    case SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES:
+      if (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES)) {
+        $access = TRUE;
+      } 
+      else {
+        $access = simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES);
+      }
+      break;
+  }
+  return $access;
+}
+
+/**
+ * Validate permission.
+ * 
+ * @global 
+ *   object $user.
+ * 
+ * @param 
+ *   array $permission the permission types.
+ * 
+ * @return 
+ *   boolean.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_validate_permission($permission) {
+  global $user;  
+
+  foreach ($user->roles as $value) {
+    if (in_array($value, user_roles(FALSE, $permission))) {
+      return TRUE;
+    }
+  }
+  
+  return FALSE;
+}
+
+/**
+ * Validate if the user has the same roles than queue.
+ * 
+ * @global 
+ *   object $user.
+ * 
+ * @param 
+ *   array $rids roles from queue.
+ * 
+ * @return 
+ *   boolean.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_validate_queue_same_roles($rid) {
+  global $user;  
+
+  foreach ($user->roles as $key => $value) {
+    if (in_array($key, $rid)) {
+      return TRUE;
+    }
+  }
+  
+  return FALSE;
 }
 
 /**

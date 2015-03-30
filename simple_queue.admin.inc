@@ -35,13 +35,6 @@ function simple_queue_list_queues() {
   // Fetch all of the queues.
   $queues = simple_queue_load_queues(simple_queue_get_all_qids(25));
 
-  //  TODO finish Roles implements.
-  //  foreach ($queues as $queue) {
-  //    if (!nodequeue_queue_access($queue)) {
-  //      unset($queues[$queue->qid]);
-  //    }
-  //  }
-
   if (empty($queues)) {
     return $output . t('No simple_queues exist.');
   }
@@ -99,16 +92,19 @@ function simple_queue_list_queues() {
   foreach ($queues as $queue) {
     $operations = array();
     
-    // TODO Implements Roles
     $operations[] = l(t('View'), 'admin/structure/simple_queue/' . $queue->qid . '/view');
-    $operations[] = l(t('Edit'), 'admin/structure/simple_queue/' . $queue->qid . '/edit');
-    $operations[] = l(t('Delete'), 'admin/structure/simple_queue/' . $queue->qid . '/delete');
-
-    // TODO finish Roles implementation.
-    // if (user_access('administer simple_queue')) {
-    //   $operations[] = l(t('Edit'), "admin/structure/nodequeue/$queue->qid/edit");
-    //   $operations[] = l(t('Delete'), "admin/structure/nodequeue/$queue->qid/delete");
-    // }
+    
+    if (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES)
+        || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES) 
+        && simple_queue_validate_queue_same_roles($queue->roles))) {
+      $operations[] = l(t('Edit'), 'admin/structure/simple_queue/' . $queue->qid . '/edit');
+    }
+    
+    if (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES)
+        || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES)
+        && simple_queue_validate_queue_same_roles($queue->roles))) {
+      $operations[] = l(t('Delete'), 'admin/structure/simple_queue/' . $queue->qid . '/delete');
+    }    
 
     $rows[] = array(
       array('class' => array('simple_queue-title'), 'data' => check_plain($queue->title)),
@@ -438,9 +434,23 @@ function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
  */
 function simple_queue_get_all_qids($page_size = 0, $pager_element = 0, $bypass_cache = FALSE) {
   $cache = &drupal_static(__FUNCTION__, array());
-  if ($bypass_cache || empty($cache[$page_size])) {
-    $query = db_select('simple_queue_queue', 'nq')
-      ->fields('nq', array('qid'));
+  if ($bypass_cache || empty($cache[$page_size])) {    
+
+    // TODO First must validate if the user has the queue list permission. 
+    // If the user has this permission then the view queues same permission is canceled.
+    if (!simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES) 
+        && simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES)) {
+      global $user;
+      
+      //SELECT r.qid FROM simple_queue_roles r WHERE IN (:rids)
+      $query = db_select('simple_queue_roles', 'r')
+        ->fields('r', array('qid'))
+        ->condition('r.rid', array_keys($user->roles), 'IN');
+    } 
+    else {
+      $query = db_select('simple_queue_queue', 'q')
+        ->fields('q', array('qid'));
+    }
 
     if (!empty($page_size)) {
       $query->extend('PagerDefault')
