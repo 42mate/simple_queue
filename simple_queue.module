@@ -94,7 +94,7 @@ function simple_queue_menu() {
   $items['admin/structure/simple_queue'] = array(
     'title' => 'Simple queues',
     'description' => 'Create and maintain simple nodequeues.',
-    'page callback' => 'simple_queue_list_queues',
+    'page callback' => 'simple_queue_queues_list',
     'access callback' => 'simple_queue_access',
     'access arguments' => array(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES),
     'file' => 'simple_queue.admin.inc',
@@ -103,7 +103,7 @@ function simple_queue_menu() {
   $items['admin/structure/simple_queue/list'] = array(
     'title' => 'List',
     'description' => 'List all queues, for other story.',
-    'page callback' => 'simple_queue_list_queues',        
+    'page callback' => 'simple_queue_queues_list',        
     'access callback' => 'simple_queue_access',
     'access arguments' => array(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES),
     'weight' => -1,
@@ -128,7 +128,7 @@ function simple_queue_menu() {
     'page arguments' => array('simple_queue_edit_queue_form', 3),
     'load arguments' => array('%map'),
     'access callback' => 'simple_queue_access',
-    'access arguments' => array(SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES),
+    'access arguments' => array(SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES, 3),
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
@@ -139,11 +139,28 @@ function simple_queue_menu() {
     'page arguments' => array('simple_queue_admin_delete', 3),
     'load arguments' => array('%map'),
     'access callback' => 'simple_queue_access',
-    'access arguments' => array(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES),
+    'access arguments' => array(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES, 3),
     'file' => 'simple_queue.admin.inc',
     'weight' => 5,
     'type' => MENU_CALLBACK,
   );  
+  // Administrative items for an individual queue.
+//  $items['admin/structure/simple_queue/%simple_queue_queue'] = array(
+//    'page callback' => 'simple_queue_nodes_list',
+//    'page arguments' => array(3),
+//    'access callback' => TRUE,
+//    'file' => 'simple_queue.admin.inc',
+//    'type' => MENU_CALLBACK
+//  );
+//  $items['admin/structure/simple_queue/%simple_queue_queue/view'] = array(
+//    'title' => 'View',
+//    'page callback' => 'simple_queue_nodes_list',
+//    'page arguments' => array(3),
+//    'access callback' => TRUE,
+//    'file' => 'simple_queue.admin.inc',
+//    'weight' => -10,
+//    'type' => MENU_DEFAULT_LOCAL_TASK
+//  );
   
   return $items;
 }
@@ -174,6 +191,9 @@ function simple_queue_queue_load($arg = '', $map_array = array()) {
  * @param 
  *  string $qid id of the queue.
  * 
+ * @param 
+ *  array $map_array containing all the elements of the URL.
+ * 
  * @return 
  *   object simple_queue.
  * 
@@ -186,6 +206,19 @@ function retrieve_simple_queue_queue($qid, $map_array) {
     ->condition('q.qid', $qid, '=')
     ->execute()->fetch();
   
+  $result_roles = db_select('simple_queue_roles', 'r')  
+    ->fields('r', array('rid'))
+    ->condition('r.qid', $qid, '=')
+    ->execute()->fetchAll();
+
+  $roles = array();
+
+  foreach ($result_roles as $key => $role) {
+    $roles[$key] = $role->rid;
+  }
+  
+  $queue->roles = $roles;
+  
   if ($map_array[4] === 'edit') {
     $result_types = db_select('simple_queue_types', 't')  
       ->fields('t', array('type'))
@@ -196,21 +229,9 @@ function retrieve_simple_queue_queue($qid, $map_array) {
 
     foreach ($result_types as $key => $type) {
       $types[$key] = $type->type;
-    }
+    }    
 
-    $result_roles = db_select('simple_queue_roles', 'r')  
-      ->fields('r', array('rid'))
-      ->condition('r.qid', $qid, '=')
-      ->execute()->fetchAll();
-
-    $roles = array();
-
-    foreach ($result_roles as $key => $role) {
-      $roles[$key] = $role->rid;
-    }
-
-    $queue->types = $types;
-    $queue->roles = $roles;
+    $queue->types = $types;    
   }  
 
   return $queue;
@@ -330,6 +351,12 @@ function simple_queue_delete($qid) {
 /**
  * Helper function - since hook_menu now takes a function instead of a boolean,
  * this function is used to compute the user's access.
+ * 
+ * @param 
+ *   srting $permission permission to access.
+ * 
+ * @param 
+ *   object $queue .
  *
  * @return 
  *   boolean.
@@ -337,40 +364,37 @@ function simple_queue_delete($qid) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_access($permission) {
+function simple_queue_access($permission, $queue = NULL) {
   $access = FALSE;
+  $rids = array();
+  
+  if (is_object($queue)) {
+    $rids = $queue->roles;
+  }
+  
   switch ($permission) {
     case SIMPLE_QUEUE_PERMISSION_LIST_QUEUES: 
-      if (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES)) {
-        $access = TRUE;
-      } 
-      else {
-        $access = simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES);
-      }
+      $access = (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES) 
+        || simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES));           
       break;
     
     case SIMPLE_QUEUE_PERMISSION_ADD_QUEUES:
       $access = simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_QUEUES);
       break;
     
-    case SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES:
-      if (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES)) {
-        $access = TRUE;
-      } 
-      else {
-        $access = simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES);
-      }
+    case SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES:      
+      $access = (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES) 
+          || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES) 
+          && simple_queue_validate_queue_same_roles($rids)));           
       break;
       
     case SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES:
-      if (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES)) {
-        $access = TRUE;
-      } 
-      else {
-        $access = simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES);
-      }
+      $access = (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES) 
+          || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES) 
+          && simple_queue_validate_queue_same_roles($rids)));    
       break;
   }
+  
   return $access;
 }
 
@@ -416,11 +440,11 @@ function simple_queue_validate_permission($permission) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_validate_queue_same_roles($rid) {
+function simple_queue_validate_queue_same_roles($rids) {
   global $user;  
 
   foreach ($user->roles as $key => $value) {
-    if (in_array($key, $rid)) {
+    if (in_array($key, $rids)) {
       return TRUE;
     }
   }

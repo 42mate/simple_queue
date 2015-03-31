@@ -16,7 +16,7 @@
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_list_queues() {
+function simple_queue_queues_list() {
   $output = '';
 
   if (module_exists('advanced_help')) {
