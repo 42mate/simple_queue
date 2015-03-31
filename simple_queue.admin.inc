@@ -86,10 +86,12 @@ function simple_queue_queues_list() {
 
   if (!empty($table_sort)) {
     if (strtolower($table_sort['sort']) == 'desc') {
-      array_multisort($sort_primary, $sort_direction['desc'], $sort_secondary, $queues); // Re-indexes array keys; key no longer equals qid.
+      // Re-indexes array keys; key no longer equals qid.
+      array_multisort($sort_primary, $sort_direction['desc'], $sort_secondary, $queues);
     }
     else {
-      array_multisort($sort_primary, $sort_direction['asc'], $sort_secondary, $queues); // Re-indexes array keys; key no longer equals qid.
+      // Re-indexes array keys; key no longer equals qid.
+      array_multisort($sort_primary, $sort_direction['asc'], $sort_secondary, $queues);
     }
   }
 
@@ -368,8 +370,10 @@ function simple_queue_admin_delete_submit($formid, &$form_state) {
  *
  * @param $bypass_cache
  *   Boolean value indicating whether to bypass the cache or not.
- * 
- * @author  
+ *
+ * @return array
+ *
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
@@ -383,7 +387,8 @@ function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
   }
 
   if (!empty($to_load)) {
-    $result = db_query("SELECT q.* FROM {simple_queue_queue} q WHERE q.qid IN (:to_load) GROUP BY q.qid", array(':to_load' => $to_load));
+    $result = db_query("SELECT q.* FROM {simple_queue_queue} q WHERE q.qid IN (:to_load) GROUP BY q.qid",
+        array(':to_load' => $to_load));
 
     foreach ($result as $queue) {
       $loaded[$queue->qid] = $queue;
@@ -393,17 +398,25 @@ function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
       $loaded[$queue->qid]->count = 0;
     }
 
-    $result = db_query("SELECT qid, rid FROM {simple_queue_roles} WHERE qid IN (:to_load)", array(':to_load' => $to_load));
+    $result = db_query("SELECT qid, rid FROM {simple_queue_roles} WHERE qid IN (:to_load)",
+      array(':to_load' => $to_load));
+
     foreach ($result as $obj) {
       $loaded[$obj->qid]->roles[] = $obj->rid;
     }
 
-    $result = db_query("SELECT qid, type FROM {simple_queue_types} WHERE qid IN (:to_load)", array(':to_load' => $to_load));
+    $result = db_query("SELECT qid, type FROM {simple_queue_types} WHERE qid IN (:to_load)",
+        array(':to_load' => $to_load));
+
     foreach ($result as $obj) {
       $loaded[$obj->qid]->types[] = $obj->type;
     }
     
-    $result = db_query("SELECT n.qid, n.nid, n.position, n.timestamp, n.display, n.lock FROM {simple_queue_nodes} n WHERE n.qid IN (:to_load)", array(':to_load' => $to_load));
+    $result = db_query("SELECT n.qid, n.nid, n.position, n.timestamp, n.display, n.lock
+        FROM {simple_queue_nodes} n
+        WHERE n.qid IN (:to_load)",
+        array(':to_load' => $to_load)
+    );
     
     foreach ($result as $obj) {      
       $loaded[$obj->qid]->nodes[] = $obj;
@@ -487,11 +500,11 @@ function simple_queue_get_all_qids($page_size = 0, $pager_element = 0, $bypass_c
 
 /**
  * Get view modes formatted.
- * 
- * @return 
- *   array view modes formatted.
- * 
- * @author  
+ *
+ * @return array
+ *   View modes formatted.
+ *
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_get_view_modes_formatted() {

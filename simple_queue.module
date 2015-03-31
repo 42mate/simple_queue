@@ -1,13 +1,13 @@
 <?php
 /**
+ * @file
+ *   Queues of Nodes for multiple propouses.
+ *
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  * 
  * @package 
  *   42mate.
- * 
- * @file    
- *   Queues management.
  */
 
 // Constant variables for the permissions.
@@ -143,41 +143,19 @@ function simple_queue_menu() {
     'file' => 'simple_queue.admin.inc',
     'weight' => 5,
     'type' => MENU_CALLBACK,
-  );  
-  // Administrative items for an individual queue.
-//  $items['admin/structure/simple_queue/%simple_queue_queue'] = array(
-//    'page callback' => 'simple_queue_nodes_list',
-//    'page arguments' => array(3),
-//    'access callback' => TRUE,
-//    'file' => 'simple_queue.admin.inc',
-//    'type' => MENU_CALLBACK
-//  );
-//  $items['admin/structure/simple_queue/%simple_queue_queue/view'] = array(
-//    'title' => 'View',
-//    'page callback' => 'simple_queue_nodes_list',
-//    'page arguments' => array(3),
-//    'access callback' => TRUE,
-//    'file' => 'simple_queue.admin.inc',
-//    'weight' => -10,
-//    'type' => MENU_DEFAULT_LOCAL_TASK
-//  );
+  );
   
   return $items;
 }
 
 /**
  * Return a simple_queue object by its id.
- * 
- * @param 
- *   string $arg qid = id of the queue.
- * 
- * @param 
- *   array $map_array An array of all path fragments (e.g. array('node','123','edit') for 'node/123/edit').
- * 
- * @return 
- *   string qid.
- * 
- * @author  
+ *
+ * @param string $arg
+ *
+ * @param array $map_array
+ *
+ * @return string string qid.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_queue_load($arg = '', $map_array = array()) { 
@@ -190,8 +168,8 @@ function simple_queue_queue_load($arg = '', $map_array = array()) {
  * 
  * @param 
  *  string $qid id of the queue.
- * 
- * @param 
+ *
+ * @param
  *  array $map_array containing all the elements of the URL.
  * 
  * @return 
@@ -351,17 +329,11 @@ function simple_queue_delete($qid) {
 /**
  * Helper function - since hook_menu now takes a function instead of a boolean,
  * this function is used to compute the user's access.
- * 
- * @param 
- *   srting $permission permission to access.
- * 
- * @param 
- *   object $queue .
  *
- * @return 
- *   boolean.
- * 
- * @author  
+ * @param $permission
+ * @param $queue
+ *
+ * @return bool boolean.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_access($permission, $queue = NULL) {
@@ -400,17 +372,14 @@ function simple_queue_access($permission, $queue = NULL) {
 
 /**
  * Validate permission.
- * 
- * @global 
- *   object $user.
- * 
- * @param 
+ *
+ * @param
  *   array $permission the permission types.
- * 
- * @return 
- *   boolean.
- * 
- * @author  
+ *
+ * @global
+ *   object $user.
+ *
+ * @return bool boolean.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_validate_permission($permission) {
@@ -427,17 +396,14 @@ function simple_queue_validate_permission($permission) {
 
 /**
  * Validate if the user has the same roles than queue.
- * 
- * @global 
- *   object $user.
- * 
- * @param 
+ *
+ * @param
  *   array $rids roles from queue.
- * 
- * @return 
- *   boolean.
- * 
- * @author  
+ *
+ * @global
+ *   object $user.
+ *
+ * @return bool boolean.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_validate_queue_same_roles($rids) {
