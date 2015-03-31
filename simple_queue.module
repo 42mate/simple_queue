@@ -89,7 +89,7 @@ function simple_queue_permission() {
  */
 function simple_queue_menu() { 
   $items = array();
-  
+
   // administrative items.
   $items['admin/structure/simple_queue'] = array(
     'title' => 'Simple queues',
@@ -443,4 +443,7 @@ class simple_queue_queue {
   var $direction = 0;
   var $roles = array();
   var $types = array();
+  
+  // Runtime.
+  var $nodes = array();
 }
