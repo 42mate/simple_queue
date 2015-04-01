@@ -99,7 +99,8 @@ function simple_queue_menu() {
     'access arguments' => array(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES),
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_NORMAL_ITEM,
-  );  
+  );
+
   $items['admin/structure/simple_queue/list'] = array(
     'title' => 'List',
     'description' => 'List all queues, for other story.',
@@ -110,6 +111,7 @@ function simple_queue_menu() {
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
+
   $items['admin/structure/simple_queue/add'] = array(
     'title' => 'Add queue',
     'description' => 'Add a new queue.',
@@ -182,12 +184,14 @@ function retrieve_simple_queue_queue($qid, $map_array) {
   $queue = db_select('simple_queue_queue', 'q')  
     ->fields('q')
     ->condition('q.qid', $qid, '=')
-    ->execute()->fetch();
+    ->execute()
+    ->fetch();
   
   $result_roles = db_select('simple_queue_roles', 'r')  
     ->fields('r', array('rid'))
     ->condition('r.qid', $qid, '=')
-    ->execute()->fetchAll();
+    ->execute()
+    ->fetchAll();
 
   $roles = array();
 
@@ -201,7 +205,8 @@ function retrieve_simple_queue_queue($qid, $map_array) {
     $result_types = db_select('simple_queue_types', 't')  
       ->fields('t', array('type'))
       ->condition('t.qid', $qid, '=')
-      ->execute()->fetchAll();
+      ->execute()
+      ->fetchAll();
 
     $types = array();
 
@@ -210,7 +215,20 @@ function retrieve_simple_queue_queue($qid, $map_array) {
     }    
 
     $queue->types = $types;    
-  }  
+  }
+
+  $nodes = db_select('simple_queue_nodes', 'n')
+    ->fields('n')
+    ->condition('n.qid', $qid, '=')
+    ->execute()
+    ->fetchAll();
+
+  if ($nodes) {
+    $queue->nodes = $nodes;
+  }
+  else {
+    $queue->nodes = array();
+  }
 
   return $queue;
 }
@@ -436,4 +454,133 @@ class simple_queue_queue {
   
   // Runtime.
   var $nodes = array();
+}
+
+/**
+ * Gets a queue from the database by id.
+ *
+ * @param $qid
+ *
+ * @return stdClass
+ *
+ */
+function simple_queue_retrieve_queue_by_id($qid) {
+  $queue = db_select('simple_queue_queue', 'q')
+    ->fields('q')
+    ->condition('q.qid', $qid, '=')
+    ->execute()
+    ->fetch();
+  return $queue;
+}
+
+/**
+ * Gets a queue from the database by name.
+ *
+ * @param $queue_name
+ *
+ * @return stdClass
+ *
+ */
+function simple_queue_retrieve_queue_by_name($queue_name) {
+  $queue = db_select('simple_queue_queue', 'q')
+    ->fields('q')
+    ->condition('q.name', $queue_name, '=')
+    ->execute()
+    ->fetch();
+  return $queue;
+}
+
+/**
+ * Loads a Queue by ID.
+ *
+ * @param $queue
+ *   Int or String : Queue ID or Queue Name
+ *
+ * @return stdClass
+ *  The Queue object with nodes or False is can't be found.
+ */
+function simple_queue_load($queue) {
+
+  if (is_numeric($queue)) {
+    $queue = simple_queue_retrieve_queue_by_id($queue);
+  }
+  else {
+    $queue = simple_queue_retrieve_queue_by_name($queue);
+  }
+
+  if (!$queue) {
+    return FALSE; //There is no queue.
+  }
+
+  $result_roles = db_select('simple_queue_roles', 'r')
+    ->fields('r', array('rid'))
+    ->condition('r.qid', $queue->qid, '=')
+    ->execute()
+    ->fetchAll();
+
+  $roles = array();
+
+  foreach ($result_roles as $key => $role) {
+    $roles[$key] = $role->rid;
+  }
+
+  $queue->roles = $roles;
+
+  $result_types = db_select('simple_queue_types', 't')
+    ->fields('t', array('type'))
+    ->condition('t.qid', $queue->qid, '=')
+    ->execute()
+    ->fetchAll();
+
+  $types = array();
+
+  foreach ($result_types as $key => $type) {
+    $types[$key] = $type->type;
+  }
+
+  $queue->types = $types;
+
+  $nodes = db_select('simple_queue_nodes', 'n')
+    ->fields('n')
+    ->condition('n.qid', $queue->qid, '=')
+    ->execute()
+    ->fetchAll();
+
+  if ($nodes) {
+    $queue->nodes = $nodes;
+  }
+  else {
+    $queue->nodes = array();
+  }
+
+  return $queue;
+}
+
+/**
+ * Renders a Queue.
+ *
+ * @param $queue
+ *   Queue Name or ID.
+ *
+ * @return array
+ *   expected by drupal_render().
+ */
+function simple_queue_render($queue) {
+  $queue = simple_queue_load($queue);
+
+  if ($queue) {
+    $render = array(
+      '#show_messages' => TRUE,
+      '#type' => 'container',
+      '#attributes' => array('class' => 'queue-' . $queue->name),
+      'nodes' => array(),
+    );
+
+    foreach ($queue->nodes as $queue_node) {
+      $node = node_load($queue_node->nid);
+      $render['nodes'][] = node_view($node, $queue_node->display);
+    }
+  }
+
+  return $render;
 }
