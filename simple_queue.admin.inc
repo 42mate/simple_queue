@@ -213,10 +213,10 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
   );
   
   $form['display'] = array(
-    '#title' => t('Default display'),
+    '#title' => t('Default View Mode'),
     '#type' => 'select',
-    '#description' => t('Select the view mode.'),
-    '#options' => simple_queue_get_view_modes_formatted(),
+    '#description' => t('The default view mode for all nodes. Until you select the allowed content types for the queue you will only have default since is the only one shared by all content types.'),
+    '#options' => simple_queue_get_view_modes_formatted($queue),
     '#default_value' => $queue->default_display,
   );
   
@@ -501,19 +501,28 @@ function simple_queue_get_all_qids($page_size = 0, $pager_element = 0, $bypass_c
 /**
  * Get view modes formatted.
  *
+ * @param $queue stdClass
+ *   The queue object
+ *
  * @return array
  *   View modes formatted.
  *
  * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_get_view_modes_formatted() {
+function simple_queue_get_view_modes_formatted($queue) {
   $view_mode_formatted = array("" => 'Default');
 
-  foreach (entity_get_info('node')['view modes'] as $key => $value) {
-    if ($value['custom settings']) {
-      $view_mode_formatted[$key] = $value['label'];
-    }    
+  $entity_info = entity_get_info('node');
+  $view_modes = $entity_info['view modes'];
+
+  foreach ($queue->types as $bundle) {
+    $view_mode_settings = field_view_mode_settings('node', $bundle);
+    foreach ($view_modes as $view_mode_name => $view_mode_info) {
+      if (!empty($view_mode_settings[$view_mode_name]['custom_settings'])) {
+        $view_mode_formatted[$view_mode_name] = $view_mode_info['label'];
+      }
+    }
   }
 
   return $view_mode_formatted;
