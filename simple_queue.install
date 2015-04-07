@@ -140,7 +140,7 @@ function simple_queue_schema() {
         'description' => 'Boolean indicating whether the node is lock. To default the node is not lock',
         'type' => 'int',
         'size' => 'tiny',
-        'default' => 1,
+        'default' => 0,
       ),
     ), // fields.
     'indexes' => array(

@@ -10,6 +10,12 @@
  *   Queues management.
  */
 
+// Constant variables.
+define('SIMPLE_QUEUE_OK', 0);
+define('SIMPLE_QUEUE_INVALID_POSITION', 1);
+define('SIMPLE_QUEUE_INVALID_NID', 2);
+define('SIMPLE_QUEUE_DUPLICATE_POSITION', 3);
+
 // Constant variables for the permissions.
 define('SIMPLE_QUEUE_PERMISSION_ADD_QUEUES', 'add queues');
 define('SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES', 'delete queues');
@@ -22,7 +28,6 @@ define('SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES', 'add nodes queues');
 define('SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES', 'add nodes same roles queues');
 define('SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES', 'lock unlock nodes');
 define('SIMPLE_QUEUE_PERMISSION_LIST_QUEUES', 'list queue');
-
 
 /* --- HOOKS ---------------------------------------------------------------- */
 
@@ -93,7 +98,7 @@ function simple_queue_menu() {
   // administrative items.
   $items['admin/structure/simple_queue'] = array(
     'title' => 'Simple queues',
-    'description' => 'Create and maintain simple nodequeues.',
+    'description' => 'Create and maintain simple queues.',
     'page callback' => 'simple_queue_queues_list',
     'access callback' => 'simple_queue_access',
     'access arguments' => array(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES),
@@ -110,6 +115,13 @@ function simple_queue_menu() {
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
+  $items['simple_queue/autocomplete'] = array(
+    'title' => 'Autocomplete',
+    'page callback' => 'simple_queue_autocomplete',
+    'access callback' => TRUE,
+    'file' => 'simple_queue.admin.inc',
+    'type' => MENU_CALLBACK
+  );
   $items['admin/structure/simple_queue/add'] = array(
     'title' => 'Add queue',
     'description' => 'Add a new queue.',
@@ -121,23 +133,21 @@ function simple_queue_menu() {
     'type' => MENU_LOCAL_ACTION,
   );
   // Actual administrative items.
-  $items['admin/structure/simple_queue/%simple_queue_queue/edit'] = array(
+  $items['admin/structure/simple_queue/%simple_queue/edit'] = array(
     'title' => 'Edit queue',
     'description' => 'Edit the queue.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('simple_queue_edit_queue_form', 3),
-    'load arguments' => array('%map'),
     'access callback' => 'simple_queue_access',
     'access arguments' => array(SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES, 3),
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/structure/simple_queue/%simple_queue_queue/delete'] = array(
+  $items['admin/structure/simple_queue/%simple_queue/delete'] = array(
     'title' => 'Delete',
     'description' => 'Delete the queue.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('simple_queue_admin_delete', 3),
-    'load arguments' => array('%map'),
     'access callback' => 'simple_queue_access',
     'access arguments' => array(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES, 3),
     'file' => 'simple_queue.admin.inc',
@@ -145,118 +155,242 @@ function simple_queue_menu() {
     'type' => MENU_CALLBACK,
   );  
   // Administrative items for an individual queue.
-//  $items['admin/structure/simple_queue/%simple_queue_queue'] = array(
-//    'page callback' => 'simple_queue_nodes_list',
-//    'page arguments' => array(3),
-//    'access callback' => TRUE,
-//    'file' => 'simple_queue.admin.inc',
-//    'type' => MENU_CALLBACK
-//  );
-//  $items['admin/structure/simple_queue/%simple_queue_queue/view'] = array(
-//    'title' => 'View',
-//    'page callback' => 'simple_queue_nodes_list',
-//    'page arguments' => array(3),
-//    'access callback' => TRUE,
-//    'file' => 'simple_queue.admin.inc',
-//    'weight' => -10,
-//    'type' => MENU_DEFAULT_LOCAL_TASK
-//  );
+  $items['admin/structure/simple_queue/%simple_queue'] = array(
+    'page callback' => 'simple_queue_nodes_list',
+    'page arguments' => array(3),
+    'access callback' => TRUE,
+    'file' => 'simple_queue.admin.inc',
+    'type' => MENU_CALLBACK
+  );
+  $items['admin/structure/simple_queue/%simple_queue/view'] = array(
+    'title' => 'View',
+    'page callback' => 'simple_queue_nodes_list',
+    'page arguments' => array(3),
+    'access callback' => TRUE,
+    'file' => 'simple_queue.admin.inc',
+    'weight' => -10,
+    'type' => MENU_DEFAULT_LOCAL_TASK
+  );
+  $items['admin/structure/simple_queue/%simple_queue/remove-node/%node'] = array(
+    'page callback' => 'simple_queue_admin_remove_node',
+    'page arguments' => array(3, 5),
+    'access callback' => TRUE,
+    'file' => 'simple_queue.admin.inc',
+    'type' => MENU_CALLBACK
+  );
   
   return $items;
 }
 
 /**
- * Return a simple_queue object by its id.
- * 
- * @param 
- *   string $arg qid = id of the queue.
- * 
- * @param 
- *   array $map_array An array of all path fragments (e.g. array('node','123','edit') for 'node/123/edit').
- * 
- * @return 
- *   string qid.
+ * Implements hook_admin_paths().
  * 
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_queue_load($arg = '', $map_array = array()) { 
-  //TODO verify if $arg has qid and $map array must have more than 4 items means that in the url has delete or edit.
-  return ($arg !== '' && sizeof($map_array) > 4) ? retrieve_simple_queue_queue($arg, $map_array) : $arg;
-}
-
-/**
- * Retrieve the queue from Database through its qid.
- * 
- * @param 
- *  string $qid id of the queue.
- * 
- * @param 
- *  array $map_array containing all the elements of the URL.
- * 
- * @return 
- *   object simple_queue.
- * 
- * @author  
- *   Daniel Anzawa daniel@42mate.com.
- */
-function retrieve_simple_queue_queue($qid, $map_array) {
-  $queue = db_select('simple_queue_queue', 'q')  
-    ->fields('q')
-    ->condition('q.qid', $qid, '=')
-    ->execute()->fetch();
-  
-  $result_roles = db_select('simple_queue_roles', 'r')  
-    ->fields('r', array('rid'))
-    ->condition('r.qid', $qid, '=')
-    ->execute()->fetchAll();
-
-  $roles = array();
-
-  foreach ($result_roles as $key => $role) {
-    $roles[$key] = $role->rid;
+function simple_queue_admin_paths() {
+  if (variable_get('node_admin_theme')) {
+    $paths = array(
+      'node/*/simple_queue' => TRUE,
+    );
+    return $paths;
   }
-  
-  $queue->roles = $roles;
-  
-  if ($map_array[4] === 'edit') {
-    $result_types = db_select('simple_queue_types', 't')  
-      ->fields('t', array('type'))
-      ->condition('t.qid', $qid, '=')
-      ->execute()->fetchAll();
-
-    $types = array();
-
-    foreach ($result_types as $key => $type) {
-      $types[$key] = $type->type;
-    }    
-
-    $queue->types = $types;    
-  }  
-
-  return $queue;
 }
 
 /**
- * Determine if the machine name is in use.
- * 
- * @param 
- *   string $machine_name A unique machine-readable name for this queue. It must only contain lowercase letters, numbers, and underscores.
- * 
- * @return 
- *   DatabaseStatementInterface A prepared statement object, already executed.
+ * Implementats hook_forms().
  * 
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_machine_name_exists($machine_name) {
-  $queue_exists = db_query_range('SELECT 1 FROM {simple_queue_queue} WHERE name = :name', 0, 1, array(':name' => $machine_name))->fetchField();
+function simple_queue_forms($form_id) {
+  $forms = array();
+  if (strpos($form_id, 'simple_queue_arrange_queue_form_') === 0) {
+    $forms[$form_id] = array(
+      'callback' => 'simple_queue_arrange_queue_form',
+    );
+  }
+  return $forms;
+}
 
-  return $queue_exists;
+/**
+ * Implements hook_theme().
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_theme() {
+  return array(
+    'simple_queue_arrange_queue_form_table' => array(
+      'render element' => 'form',
+    ),
+    'simple_queue_queue_empty_text' => array(
+      'variables' => array(),
+    ),
+    'simple_queue_queue_full_text' => array(
+      'variables' => array(),
+    ),
+    'simple_queue_queue_count_text' => array(
+      'variables' => array('count' => 0),
+    ),
+  );
+}
+
+/**
+ * Implements hook_element_info().
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_element_info() {
+  $type = array();
+
+  $type['position'] = array(
+    '#input'         => TRUE,
+    '#delta'         => 10,
+    '#default_value' => 0,
+    '#process'       => array('process_position', 'ajax_process_form'),
+  );
+
+  return $type;
+}
+
+/**
+ * Expand position elements into selects. Works like the weight element, except
+ * only positive values are allowed.
+ * 
+ * @param 
+ *   array $element Description.
+ * 
+ * @return 
+ *   array Description
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function process_position($element) {
+  for ($n = 1; $n <= $element['#delta']; $n++) {
+    $positions[$n] = $n;
+  }
+
+  $element['#options']      = $positions;
+  $element['#options']['r'] = t('Remove');
+  $element['#type']         = 'select';
+
+  // add default properties for the select element
+  $element += element_info('select');
+
+  return $element;
+}
+
+// --------------------------------------------------------------------------
+// simple_queue manipulation API.
+
+/**
+ * The simple_queue queue class; the constructor makes it so we don't have to
+ * always check to see if our variables are empty or not.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+class simple_queue_queue {
+  var $name = '';
+  var $title = '';
+  var $size = 0;
+  var $default_display = '';
+  var $direction = 0;
+  var $roles = array();
+  var $types = array();
+  
+  // Runtime.
+  var $nodes = array();
+}
+
+/**
+ * Load an array of $qids.
+ *
+ * This exists to provide a way of loading a bunch of queues with
+ * the fewest queries. Loading 5 queues results in only 4 queries,
+ * not 20. This also caches queues so that they don't get loaded
+ * repeatedly.
+ *
+ * @param 
+ *   array $qids An array of queue IDs to load.
+ *
+ * @param $bypass_cache
+ *   Boolean value indicating whether to bypass the cache or not.
+ * 
+ * @return 
+ *   array object queue.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
+  static $cache = array();
+  $to_load = $loaded = array();
+
+  foreach ($qids as $qid) {
+    if ($bypass_cache || !isset($cache[$qid])) {
+      $to_load[] = $qid;
+    }
+  }
+
+  if (!empty($to_load)) {
+    $result = db_query("SELECT q.* FROM {simple_queue_queue} q WHERE q.qid IN (:to_load) GROUP BY q.qid", array(':to_load' => $to_load));
+    foreach ($result as $queue) {
+      $loaded[$queue->qid] = $queue;
+      // ensure valid defaults:
+      $loaded[$queue->qid]->types = array();
+      $loaded[$queue->qid]->roles = array();
+      $loaded[$queue->qid]->count = 0;
+    }
+
+    $result = db_query("SELECT qid, rid FROM {simple_queue_roles} WHERE qid IN (:to_load)", array(':to_load' => $to_load));
+    foreach ($result as $obj) {
+      $loaded[$obj->qid]->roles[] = $obj->rid;
+    }
+
+    $result = db_query("SELECT qid, type FROM {simple_queue_types} WHERE qid IN (:to_load)", array(':to_load' => $to_load));
+    foreach ($result as $obj) {
+      $loaded[$obj->qid]->types[] = $obj->type;
+    }
+    
+    $result = db_query("SELECT n.qid, n.nid, n.position, n.timestamp, n.display, n.lock FROM {simple_queue_nodes} n WHERE n.qid IN (:to_load)", array(':to_load' => $to_load));  
+    foreach ($result as $obj) {  
+      $node = NULL;
+      foreach ($obj as $key => $value) {
+        $node[$key] = $value;
+      }
+      $loaded[$obj->qid]->nodes[] = $node;
+    }
+
+    $context = 'load_queues';
+    drupal_alter('simple_queue', $loaded, $context);
+  }
+
+  if ($bypass_cache) {
+    return $loaded;
+  }
+  else {
+    if (!empty($loaded)) {
+      $cache += $loaded;
+    }
+    $queues = array();
+    foreach ($qids as $qid) {
+      if (isset($cache[$qid])) {
+        $queues[$qid] = $cache[$qid];
+      }
+    }
+    return $queues;
+  }
 }
 
 /**
  * Save a simple_queue.
+ * 
+ * @param 
+ *   array $queue queue.
  * 
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
@@ -349,6 +483,325 @@ function simple_queue_delete($qid) {
 }
 
 /**
+ * Add a node to a queue.
+ *
+ * @param $queue
+ *   The parent queue of the queue. This is required so that we can
+ *   pop nodes out if the queue breaks size limits.
+ * 
+ * @param 
+ *   string $nid The node ID.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_queue_add($queue, $nid) {
+  if (!empty($nid)) {
+    db_query("INSERT INTO {simple_queue_nodes} (qid, nid, position, timestamp) VALUES (:qid, :nid, IFNULL((SELECT MAX(position)+1 FROM (SELECT * from {simple_queue_nodes} WHERE qid = :qid) as nn), 1), :time)", array(':qid' => $queue->qid, ':nid' => $nid, ':time' => REQUEST_TIME));
+    $queue->count = db_query("SELECT COUNT(nid) FROM {simple_queue_nodes} WHERE qid = :qid", array(':qid' => $queue->qid))->fetchField();
+    // If adding this would make the queue too big, pop the front node
+    // (or nodes) out.
+    if (!empty($queue->size)) {
+      // 0 means infinity so never do this if FALSE.
+      simple_queue_check_queue_size($queue, $queue->size);
+    }
+    if (module_exists('apachesolr')) {
+      // TODO Apachesolr has changed this function from
+      // apachesolr_mark_node($nid) to
+      // apachesolr_mark_entity('node', $nid);
+      // reference: https://www.drupal.org/node/1425326
+      apachesolr_mark_node($nid);
+    }
+    // Invoke the hook to notify other modules of the node addition.
+    module_invoke_all('simple_queue_add', $queue->qid, $nid);
+  }
+}
+
+/**
+ * Remove a queue.
+ * 
+ * @param 
+ *   string $qid id of the queue.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_remove_queue($qid) {
+  db_delete('simple_queue_queue')
+    ->condition('qid', $qid)
+    ->execute();
+}
+
+/**
+ * Fetch a list of nodes available to a given queue
+ * for autocomplete.
+ *
+ * @param 
+ *   array $queue The queue.
+ * 
+ * @param 
+ *   string $string The string being matched.
+ *
+ * @return
+ *   An keyed array $nid => $title.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_api_autocomplete($queue, $string) {
+  $matches = array();
+  if (empty($string)) {
+    return $matches;
+  }
+
+  $query = db_select('node', 'n')
+    ->addTag('node_access')
+    ->fields('n', array('nid', 'tnid', 'title'))
+    ->range(0, variable_get('simple_queue_autocomplete_limit', 10));
+
+  if (!empty($queue->types)) {
+    $query->condition('n.type', $queue->types, 'IN');
+  }
+
+  global $user;
+  if (!user_access('administer nodes', $user)) {
+    $query->condition(db_or()->condition('n.status', 1)->condition('n.uid', $user->uid));
+  }
+
+  // Run a match to see if they're specifying by nid.
+  $preg_matches = array();
+  $match = preg_match('/\[nid: (\d+)\]/', $string, $preg_matches);
+  if (!$match) {
+    $match = preg_match('/^nid: (\d+)/', $string, $preg_matches);
+  }
+
+  if ($match) {
+    // If it found a nid via specification, reduce our resultset to just that nid.
+    $query->condition('n.nid', $preg_matches[1]);
+  }
+  else {
+    // Build the constant parts of the query.
+    $query->where('LOWER(n.title) LIKE LOWER(:string)', array(':string' => '%' . db_like($string) . '%'));
+  }
+  
+  $result = $query->execute();
+
+  foreach ($result as $node) {
+    $matches[$node->nid] = check_plain($node->title) . " [nid: $node->nid]";
+  }
+
+  return $matches;
+}
+
+/**
+ * Load a simple_queue.
+ *
+ * @param 
+ *   string $qid The qid of the queue to load.
+ * 
+ * @return 
+ *   array a queue.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_load($qid) {
+  $queues = simple_queue_load_queues(array($qid));
+  return !empty($queues) ? array_shift($queues) : array();
+}
+
+// --------------------------------------------------------------------------
+// Queue position control
+
+/**
+ * Get the position of a node in a queue, or 0 if not found.
+ * 
+ * @param 
+ *   string $qid id of the queue.
+ * 
+ * @param 
+ *   string $nid id of the node.
+ * 
+ * @return 
+ *   string position of a node in a queue.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_get_queue_position($qid, $nid) {
+  // We use MIN to make sure we always get the closes to the front of the
+  // queue in case the queue has nodes in it multiple times.
+  $pos = db_query("SELECT MIN(position) FROM {simple_queue_nodes} WHERE qid = :qid AND nid = :nid", array(':qid' => $qid, ':nid' => $nid))->fetchField();
+  return $pos;
+}
+
+/**
+ * Remove a node from the queue. If a node is in the queue more than once,
+ * only the first (closest to 0 position, or the front of the queue) will
+ * be removed.
+ *
+ * @param 
+ *   srting $qid The queue to remove nodes from.
+ * 
+ * @param 
+ *   string $nid The node to remove.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_queue_remove_node($qid, $nid) {
+  $pos = simple_queue_get_queue_position($qid, $nid);
+  if ($pos) {
+    simple_queue_queue_remove($qid, $pos);
+    if (module_exists('apachesolr')) {
+      apachesolr_mark_node($nid);
+    }
+  }
+}
+
+/**
+ * Guarantee that a queue has not gotten too big. It's important to call
+ * this after an operation that might have reduced a queue's maximum size.
+ * It stores the count to save a query if this is to be followed by an add
+ * operation.
+ *
+ * @param 
+ *   array $queue The queue object.
+ * 
+ * @param 
+ *   string $size size of the queue.
+ * 
+ *  @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_check_queue_size($queue, $size = NULL) {
+  if (!isset($size)) {
+    $size = $queue->size;
+  }
+
+  if ($queue->size) {
+    simple_queue_queue_remove($queue->qid, 1, $queue->count - $size);
+    $queue->count = $size;
+  }
+}
+
+/**
+ * Remove a node or node(s) from a simple_queue by position.
+ *
+ * If you know the nid but but not the position, use
+ * @see simple_queue_queue_remove_node() instead.
+ *
+ * @param 
+ *   string $qid The queue to remove nodes from.
+ * 
+ * @param 
+ *   string $start The first position (starting from 1) to remove.
+ * 
+ * @param 
+ *   string $end The last position to remove. If NULL or equal to $start,
+ *   only one node will be removed. Thus if $start is 1 and $end is 2,
+ *   the first and second items will be removed from the queue.
+ *
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_queue_remove($qid, $start, $end = NULL) {
+  if (!isset($end)) {
+    $end = $start;
+  }
+
+  // Retrieve the nodes that are being removed.
+  $result = db_query("SELECT nid FROM {simple_queue_nodes} WHERE qid = :qid AND position >= :start AND position <= :end",
+    array(
+      ':qid' => $qid,
+      ':start' => $start,
+      ':end' => $end,
+    )
+  );
+
+  $diff = $end - $start + 1;
+  db_delete('simple_queue_nodes')
+    ->condition('qid', $qid)
+    ->condition('position', $start, '>=')
+    ->condition('position', $end, '<=')
+    ->execute();
+
+  db_update('simple_queue_nodes')
+    ->expression('position', 'position - ' . $diff)
+    ->condition('qid', $qid)
+    ->condition('position', $end, '>')
+    ->execute();
+
+  // Invoke the hook to let other modules know that the nodes were removed.
+  foreach ($result as $node) {
+    module_invoke_all('simple_queue_remove', $qid, $node->nid);
+  }
+}
+
+/**
+ * Get a textual representation of a simple_queue's queue size.
+ * 
+ * @param 
+ *   string $max Description
+ * 
+ * @param 
+ *   string $count Description
+ * 
+ * @param 
+ *   boolean $long Description
+ * 
+ * @return  
+ *   string Description
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_queue_size_text($max, $count, $long = TRUE) {
+  if (empty($count)) {
+    $message = theme('simple_queue_queue_empty_text');
+  }
+  elseif ($count == $max) {
+    $message = theme('simple_queue_queue_full_text');
+  }
+  else {
+    if ($long) {
+      $message = theme('simple_queue_queue_count_text', array('count' => $count));
+    }
+    else {
+      $message = $count;
+    }
+  }
+  return $message;
+}
+
+/**
+ * Substitute the simple_queue title into some other string.
+ *
+ * This function does NOT check_plain the title! The output MUST be checked
+ * after this is complete.
+ * 
+ * @param 
+ *   string $text Description
+ * 
+ * @param 
+ *   array $queue a queue.
+ * 
+ * @return 
+ *   string Description
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_title_substitute($text, $queue) {
+  if (empty($text)) {
+    return $queue->title;
+  }
+  return str_replace('%queue', $queue->title, $text);
+}
+
+/* --- UTILITY -------------------------------------------------------------- */
+
+/**
  * Helper function - since hook_menu now takes a function instead of a boolean,
  * this function is used to compute the user's access.
  * 
@@ -356,10 +809,10 @@ function simple_queue_delete($qid) {
  *   srting $permission permission to access.
  * 
  * @param 
- *   object $queue .
+ *   array $queue a queue.
  *
  * @return 
- *   boolean.
+ *   boolean if the user can access.
  * 
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
@@ -391,6 +844,12 @@ function simple_queue_access($permission, $queue = NULL) {
     case SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES:
       $access = (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES) 
           || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES) 
+          && simple_queue_validate_queue_same_roles($rids)));    
+      break;
+    
+    case SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES:
+      $access = (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES) 
+          || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES) 
           && simple_queue_validate_queue_same_roles($rids)));    
       break;
   }
@@ -453,21 +912,293 @@ function simple_queue_validate_queue_same_roles($rids) {
 }
 
 /**
- * The simple_queue queue class; the constructor makes it so we don't have to
- * always check to see if our variables are empty or not.
+ * Determine if the machine name is in use.
+ * 
+ * @param 
+ *   string $machine_name A unique machine-readable name for this queue. It must only contain lowercase letters, numbers, and underscores.
+ * 
+ * @return 
+ *   DatabaseStatementInterface A prepared statement object, already executed.
  * 
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-class simple_queue_queue {
-  var $name = '';
-  var $title = '';
-  var $size = 0;
-  var $default_display = '';
-  var $direction = 0;
-  var $roles = array();
-  var $types = array();
+function simple_queue_machine_name_exists($machine_name) {
+  $queue_exists = db_query_range('SELECT 1 FROM {simple_queue_queue} WHERE name = :name', 0, 1, array(':name' => $machine_name))->fetchField();
+
+  return $queue_exists;
+}
+
+/**
+ * Get the list of nodes in the queue, taking into account node access restrictions.
+ * 
+ * @param 
+ *   string $qid id of the queue.
+ * 
+ * @return 
+ *   array list of nodes in the queue.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_nids_visible($qid = -1, $account = NULL) {
+  if (!$account) {
+    global $user;
+    $account = $user;
+  }
+  $nids_visible = array();
+
+  $query = db_select('node', 'n')
+    ->fields('n', array('nid'))
+    ->addTag('node_access')
+    ->distinct()
+    ->condition('sqn.qid', $qid)
+    ->orderBy('sqn.position', 'ASC');
+  $query->leftJoin('simple_queue_nodes', 'sqn', 'sqn.nid = n.nid');
+
+  if (!user_access('administer nodes', $account)) {
+    $query->condition(db_or()->condition('n.status', 1)->condition('n.uid', $account->uid));
+  }
+
+  // Disable i18n_select for this query.
+  if (arg(0) === 'admin') {
+    $query->addTag('i18n_select');
+  }
+
+  $query_restricted = $query->execute();
+  foreach ($query_restricted as $result_restricted) {
+    $nids_visible[$result_restricted->nid] = $result_restricted->nid;
+  }
+  return $nids_visible;
+}
+
+/**
+ * Generate a query string to use on simple_queue's private links.
+ *
+ * @param 
+ *   string $seed The seed to use when generating a token. If NULL no token will
+ *   be generated.
+ * 
+ * @param 
+ *   $destination The destination to use. If FALSE one won't be used; if TRUE
+ *   one will be generated from drupal_get_destination().
+ * 
+ * @param
+ *   $query An array of additional items to add to the query.
+ *
+ * @return
+ *   The query string suitable for use in the l() function.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_get_query_string($seed, $destination = FALSE, $query = array()) {
+  $dest = drupal_get_destination();
+  foreach ($dest as $key => $value) {
+    $query[$key] = $value;
+  }
+
+  if (isset($seed)) {
+    $token = explode('=', simple_queue_get_token($seed));
+    $query[$token[0]] = $token[1];
+  }
+
+  return $query;
+}
+
+/**
+ * Get a private token used to protect simple_queue's links from spoofing.
+ * 
+ * @param
+ *   string $nid id of the node.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_get_token($nid) {
+  return 'token=' . drupal_get_token($nid);
+}
+
+/**
+ * Check to see if the token generated from seed matches.
+ * 
+ * @param 
+ *   string $seed The seed to use when generating a token. If NULL no token will
+ *   be generated.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_check_token($seed) {
+  return drupal_get_token($seed) == filter_input(INPUT_GET, 'token');
+}
+
+/**
+ * Print the JSON output for our AJAX calls.
+ * 
+ * @param 
+ *   type $name Description
+ * 
+ * @param 
+ *   type $name Description
+ * 
+ * @param 
+ *   type $name Description
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_js_output($label, $href, $count = NULL, $qid = NULL) {
+  $return = new stdClass();
+  $return->status = 1;
+  $return->label = check_plain($label);
+  $return->href = $href;
+  if (isset($count)) {
+    $return->count = $count;
+  }
+  if (isset($qid)) {
+    $return->qid = $qid;
+  }
+
+  drupal_json_output($return);
+  exit;
+}
+
+/* --- THEME ---------------------------------------------------------------- */
+
+/**
+ * Theme the queue overview as a sortable list.
+ * 
+ * @ingroup 
+ *   themeable
+ * 
+ * @param 
+ *   array $variables Allow access to the form.
+ * 
+ * @return 
+ *   string render of the form table.
+ *
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function theme_simple_queue_arrange_queue_form_table($variables) {
+  $form = $variables['form'];
+
+  $output = '';
+
+  // Get css to hide some of the help text if javascript is disabled.
+  drupal_add_css(drupal_get_path('module', 'simple_queue') . '/simple_queue.css');
+
+  $table_id = 'simple_queue-dragdrop-' . $form['#queue']['qid'];
+  $table_classes = array(
+    'simple_queue-dragdrop',
+    'simple_queue-dragdrop-qid-' . $form['#queue']['qid'],
+  );
   
-  // Runtime.
-  var $nodes = array();
+  drupal_add_tabledrag($table_id, 'order', 'sibling', 'node-position');
+  drupal_add_js(drupal_get_path('module', 'simple_queue') . '/simple_queue_dragdrop.js');
+  
+  $reverse[str_replace('-', '_', $table_id)] = FALSE;
+
+  drupal_add_js(
+    array(
+      'simple_queue' => array(
+        'reverse' => $reverse,
+      )
+    ),
+    array(
+      'type' => 'setting',
+      'scope' => JS_DEFAULT,
+    )
+  );
+
+  // Render form as table rows.
+  $rows = array();
+  $counter = 1;
+  foreach (element_children($form) as $key) {
+    if (isset($form[$key]['title'])) {
+      $row = array();
+
+      $row[] = drupal_render($form[$key]['position']);
+      $row[] = array(
+        'data' => $counter,
+        'class' => array('position')
+      );
+      
+      $row[] = drupal_render($form[$key]['title']);
+      $row[] = drupal_render($form[$key]['status']);        
+      $row[] = drupal_render($form[$key]['date']);      
+      $row[] = drupal_render($form[$key]['type']);      
+      $row[] = drupal_render($form[$key]['lock']);
+      $row[] = (!empty($form[$key]['edit'])) ? drupal_render($form[$key]['edit']) : '&nbsp;';
+      $row[] = drupal_render($form[$key]['remove']);      
+
+      $rows[] = array(
+        'data'  => $row,
+        'class' => array('draggable'),
+      );
+    }
+
+    $counter++;
+  }
+  if (empty($rows)) {
+    $rows[] = array(array('data' => t('No nodes in this queue.'), 'colspan' => 7));
+  }
+
+  // Render the main simple_queue table.
+  $header = array(t('Position'), t('Position'), t('Title'), t('Status'), t('Create date'), t('Type'), t('Lock'), array('data' => t('Actions'), 'colspan' => 2));
+  $output .= theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => $table_id, 'class' => $table_classes)));
+
+  return $output;
+}
+
+/**
+ * Return a "queue is empty" message.
+ * 
+ * @ingroup 
+ *   themeable
+ * 
+ * @return 
+ *   string a "queue is empty" message.
+ *
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function theme_simple_queue_queue_empty_text() {
+  return t('Queue empty');
+}
+
+/**
+ * Return a "queue is full" message.
+ * 
+ * @ingroup 
+ *   themeable
+ * 
+ * @return
+ *   string a "queue is full" message.
+ *
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function theme_simple_queue_queue_full_text() {
+  return t('Queue full');
+}
+
+/**
+ * Return a count of elements in the queue.
+ * 
+ * @ingroup 
+ *   themeable
+ * 
+ * @param 
+ *   array $variables Description.
+ * 
+ * @return 
+ *   string a count of elements in the queue.
+ *
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function theme_simple_queue_queue_count_text($variables) {
+  return t('@count in queue', array('@count' => $variables['count']));
 }
