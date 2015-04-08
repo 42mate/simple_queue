@@ -569,19 +569,29 @@ function simple_queue_api_autocomplete($queue, $string) {
   if (empty($string)) {
     return $matches;
   }
-
+  
+  $qids_enable = array();
+  
+  $res = db_query("SELECT nid FROM {node} WHERE nid NOT IN"
+      . " (SELECT nid FROM {simple_queue_nodes} WHERE qid =:qid)",
+      array(':qid' => $queue->qid))->fetchAll();
+  
+  foreach ($res as $key => $value) {
+    $qids_enable[$key] = $value->nid;
+  }
+  
   $query = db_select('node', 'n')
     ->addTag('node_access')
     ->fields('n', array('nid', 'tnid', 'title'))
     ->range(0, variable_get('simple_queue_autocomplete_limit', 10));
 
   if (!empty($queue->types)) {
-    $query->condition('n.type', $queue->types, 'IN');
+    $query->condition('n.type', $queue->types, 'IN')->condition('n.status', 1);
   }
 
   global $user;
   if (!user_access('administer nodes', $user)) {
-    $query->condition(db_or()->condition('n.status', 1)->condition('n.uid',
+    $query->condition(db_or()->condition('n.uid',
         $user->uid));
   }
 
@@ -601,11 +611,13 @@ function simple_queue_api_autocomplete($queue, $string) {
     $query->where('LOWER(n.title) LIKE LOWER(:string)', array(':string' => '%'
       . db_like($string) . '%'));
   }
-  
+
   $result = $query->execute();
 
   foreach ($result as $node) {
-    $matches[$node->nid] = check_plain($node->title) . " [nid: $node->nid]";
+    if (in_array($node->nid, $qids_enable)) {
+      $matches[$node->nid] = check_plain($node->title) . " [nid: $node->nid]";
+    }    
   }
 
   return $matches;
@@ -1279,10 +1291,14 @@ function theme_simple_queue_queue_count_text($variables) {
 /**
  * Gets a queue from the database by id.
  *
- * @param $qid
+ * @param 
+ *   int $qid ID of the queue.
  *
- * @return stdClass
+ * @return
+ *  stdClass.
  *
+ * @author
+ *   Casiva Agustin agustin@42mate.com.
  */
 function simple_queue_retrieve_queue_by_id($qid) {
   $queue = db_select('simple_queue_queue', 'q')
@@ -1296,9 +1312,13 @@ function simple_queue_retrieve_queue_by_id($qid) {
 /**
  * Gets a queue from the database by name.
  *
- * @param $queue_name
+ * @param 
+ *   string $queue_name queue name.
  *
- * @return stdClass
+ * @return stdClass.
+ * 
+ * @author
+ *   Casiva Agustin agustin@42mate.com.
  *
  */
 function simple_queue_retrieve_queue_by_name($queue_name) {
@@ -1313,11 +1333,14 @@ function simple_queue_retrieve_queue_by_name($queue_name) {
 /**
  * Renders a Queue.
  *
- * @param $queue
- *   Queue Name or ID.
- *
+ * @param 
+ *   string $queue Queue Name or ID.
+ * 
  * @return array
  *   expected by drupal_render().
+ * 
+ * @author
+ *   Casiva Agustin agustin@42mate.com.
  */
 function simple_queue_render($queue) {
   $queue = simple_queue_load($queue);
