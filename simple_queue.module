@@ -94,7 +94,6 @@ function simple_queue_permission() {
  */
 function simple_queue_menu() { 
   $items = array();
-
   // administrative items.
   $items['admin/structure/simple_queue'] = array(
     'title' => 'Simple queues',
@@ -116,6 +115,7 @@ function simple_queue_menu() {
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
+  
   $items['simple_queue/autocomplete'] = array(
     'title' => 'Autocomplete',
     'page callback' => 'simple_queue_autocomplete',
@@ -123,6 +123,7 @@ function simple_queue_menu() {
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_CALLBACK
   );
+  
   $items['admin/structure/simple_queue/add'] = array(
     'title' => 'Add queue',
     'description' => 'Add a new queue.',
@@ -144,6 +145,7 @@ function simple_queue_menu() {
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
+  
   $items['admin/structure/simple_queue/%simple_queue/delete'] = array(
     'title' => 'Delete',
     'description' => 'Delete the queue.',
@@ -163,6 +165,7 @@ function simple_queue_menu() {
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_CALLBACK
   );
+  
   $items['admin/structure/simple_queue/%simple_queue/view'] = array(
     'title' => 'View',
     'page callback' => 'simple_queue_nodes_list',
@@ -172,6 +175,7 @@ function simple_queue_menu() {
     'weight' => -10,
     'type' => MENU_DEFAULT_LOCAL_TASK
   );
+  
   $items['admin/structure/simple_queue/%simple_queue/remove-node/%node'] = array(
     'page callback' => 'simple_queue_admin_remove_node',
     'page arguments' => array(3, 5),
@@ -338,7 +342,8 @@ function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
   }
 
   if (!empty($to_load)) {
-    $result = db_query("SELECT q.* FROM {simple_queue_queue} q WHERE q.qid IN (:to_load) GROUP BY q.qid", array(':to_load' => $to_load));
+    $result = db_query("SELECT q.* FROM {simple_queue_queue} q WHERE q.qid"
+        . " IN (:to_load) GROUP BY q.qid", array(':to_load' => $to_load));
     foreach ($result as $queue) {
       $loaded[$queue->qid] = $queue;
       // ensure valid defaults:
@@ -347,17 +352,21 @@ function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
       $loaded[$queue->qid]->count = 0;
     }
 
-    $result = db_query("SELECT qid, rid FROM {simple_queue_roles} WHERE qid IN (:to_load)", array(':to_load' => $to_load));
+    $result = db_query("SELECT qid, rid FROM {simple_queue_roles} WHERE qid"
+        . " IN (:to_load)", array(':to_load' => $to_load));
     foreach ($result as $obj) {
       $loaded[$obj->qid]->roles[] = $obj->rid;
     }
 
-    $result = db_query("SELECT qid, type FROM {simple_queue_types} WHERE qid IN (:to_load)", array(':to_load' => $to_load));
+    $result = db_query("SELECT qid, type FROM {simple_queue_types} WHERE qid"
+        . " IN (:to_load)", array(':to_load' => $to_load));
     foreach ($result as $obj) {
       $loaded[$obj->qid]->types[] = $obj->type;
     }
     
-    $result = db_query("SELECT n.qid, n.nid, n.position, n.timestamp, n.display, n.lock FROM {simple_queue_nodes} n WHERE n.qid IN (:to_load)", array(':to_load' => $to_load));  
+    $result = db_query("SELECT n.qid, n.nid, n.position, n.timestamp,"
+        . " n.display, n.lock FROM {simple_queue_nodes} n WHERE n.qid"
+        . " IN (:to_load)", array(':to_load' => $to_load));  
     foreach ($result as $obj) {  
       $node = NULL;
       foreach ($obj as $key => $value) {
@@ -498,10 +507,16 @@ function simple_queue_delete($qid) {
  */
 function simple_queue_queue_add($queue, $nid) {
   if (!empty($nid)) {
-    db_query("INSERT INTO {simple_queue_nodes} (qid, nid, position, timestamp) VALUES (:qid, :nid, IFNULL((SELECT MAX(position)+1 FROM (SELECT * from {simple_queue_nodes} WHERE qid = :qid) as nn), 1), :time)", array(':qid' => $queue->qid, ':nid' => $nid, ':time' => REQUEST_TIME));
-    $queue->count = db_query("SELECT COUNT(nid) FROM {simple_queue_nodes} WHERE qid = :qid", array(':qid' => $queue->qid))->fetchField();
+    db_query("INSERT INTO {simple_queue_nodes} (qid, nid, position, timestamp)"
+        . " VALUES (:qid, :nid, IFNULL((SELECT MAX(position)+1 FROM"
+        . " (SELECT * from {simple_queue_nodes} WHERE qid = :qid) as nn), 1),"
+        . " :time)", array(':qid' => $queue->qid, ':nid' => $nid, ':time'
+          => REQUEST_TIME));
+    $queue->count = db_query("SELECT COUNT(nid) FROM {simple_queue_nodes}"
+        . " WHERE qid = :qid", array(':qid' => $queue->qid))->fetchField();
     // If adding this would make the queue too big, pop the front node
     // (or nodes) out.
+
     if (!empty($queue->size)) {
       // 0 means infinity so never do this if FALSE.
       simple_queue_check_queue_size($queue, $queue->size);
@@ -566,7 +581,8 @@ function simple_queue_api_autocomplete($queue, $string) {
 
   global $user;
   if (!user_access('administer nodes', $user)) {
-    $query->condition(db_or()->condition('n.status', 1)->condition('n.uid', $user->uid));
+    $query->condition(db_or()->condition('n.status', 1)->condition('n.uid',
+        $user->uid));
   }
 
   // Run a match to see if they're specifying by nid.
@@ -582,7 +598,8 @@ function simple_queue_api_autocomplete($queue, $string) {
   }
   else {
     // Build the constant parts of the query.
-    $query->where('LOWER(n.title) LIKE LOWER(:string)', array(':string' => '%' . db_like($string) . '%'));
+    $query->where('LOWER(n.title) LIKE LOWER(:string)', array(':string' => '%'
+      . db_like($string) . '%'));
   }
   
   $result = $query->execute();
@@ -604,7 +621,7 @@ function simple_queue_api_autocomplete($queue, $string) {
  *  The Queue object with nodes or False is can't be found.
  */
 function simple_queue_load($queue) {
-  if (intval($queue) !== 0) {
+  if (is_numeric($queue)) {
     $queue = simple_queue_retrieve_queue_by_id($queue);
   }
   else {
@@ -680,7 +697,9 @@ function simple_queue_load($queue) {
 function simple_queue_get_queue_position($qid, $nid) {
   // We use MIN to make sure we always get the closes to the front of the
   // queue in case the queue has nodes in it multiple times.
-  $pos = db_query("SELECT MIN(position) FROM {simple_queue_nodes} WHERE qid = :qid AND nid = :nid", array(':qid' => $qid, ':nid' => $nid))->fetchField();
+  $pos = db_query("SELECT MIN(position) FROM {simple_queue_nodes} WHERE"
+      . " qid = :qid AND nid = :nid", array(':qid' => $qid, ':nid'
+        => $nid))->fetchField();
   return $pos;
 }
 
@@ -720,7 +739,7 @@ function simple_queue_queue_remove_node($qid, $nid) {
  * @param 
  *   string $size size of the queue.
  * 
- *  @author  
+ * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_check_queue_size($queue, $size = NULL) {
@@ -728,7 +747,7 @@ function simple_queue_check_queue_size($queue, $size = NULL) {
     $size = $queue->size;
   }
 
-  if ($queue->size) {
+  if ($queue->count > $queue->size) {
     simple_queue_queue_remove($queue->qid, 1, $queue->count - $size);
     $queue->count = $size;
   }
@@ -760,7 +779,8 @@ function simple_queue_queue_remove($qid, $start, $end = NULL) {
   }
 
   // Retrieve the nodes that are being removed.
-  $result = db_query("SELECT nid FROM {simple_queue_nodes} WHERE qid = :qid AND position >= :start AND position <= :end",
+  $result = db_query("SELECT nid FROM {simple_queue_nodes} WHERE qid = :qid"
+      . " AND position >= :start AND position <= :end",
     array(
       ':qid' => $qid,
       ':start' => $start,
@@ -958,7 +978,8 @@ function simple_queue_validate_queue_same_roles($rids) {
  * Determine if the machine name is in use.
  * 
  * @param 
- *   string $machine_name A unique machine-readable name for this queue. It must only contain lowercase letters, numbers, and underscores.
+ *   string $machine_name A unique machine-readable name for this queue.
+ *  It must only contain lowercase letters, numbers, and underscores.
  * 
  * @return 
  *   DatabaseStatementInterface A prepared statement object, already executed.
@@ -967,7 +988,8 @@ function simple_queue_validate_queue_same_roles($rids) {
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_machine_name_exists($machine_name) {
-  $queue_exists = db_query_range('SELECT 1 FROM {simple_queue_queue} WHERE name = :name', 0, 1, array(':name' => $machine_name))->fetchField();
+  $queue_exists = db_query_range('SELECT 1 FROM {simple_queue_queue}'
+      . ' WHERE name = :name', 0, 1, array(':name' => $machine_name))->fetchField();
 
   return $queue_exists;
 }
@@ -1000,7 +1022,8 @@ function simple_queue_nids_visible($qid = -1, $account = NULL) {
   $query->leftJoin('simple_queue_nodes', 'sqn', 'sqn.nid = n.nid');
 
   if (!user_access('administer nodes', $account)) {
-    $query->condition(db_or()->condition('n.status', 1)->condition('n.uid', $account->uid));
+    $query->condition(db_or()->condition('n.status', 1)
+        ->condition('n.uid', $account->uid));
   }
 
   // Disable i18n_select for this query.
@@ -1035,7 +1058,8 @@ function simple_queue_nids_visible($qid = -1, $account = NULL) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_get_query_string($seed, $destination = FALSE, $query = array()) {
+function simple_queue_get_query_string($seed, $destination = FALSE,
+    $query = array()) {
   $dest = drupal_get_destination();
   foreach ($dest as $key => $value) {
     $query[$key] = $value;
@@ -1130,7 +1154,8 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
   $output = '';
 
   // Get css to hide some of the help text if javascript is disabled.
-  drupal_add_css(drupal_get_path('module', 'simple_queue') . '/simple_queue.css');
+  drupal_add_css(drupal_get_path('module', 'simple_queue')
+      . '/simple_queue.css');
 
   $table_id = 'simple_queue-dragdrop-' . $form['#queue']['qid'];
   $table_classes = array(
@@ -1139,7 +1164,8 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
   );
   
   drupal_add_tabledrag($table_id, 'order', 'sibling', 'node-position');
-  drupal_add_js(drupal_get_path('module', 'simple_queue') . '/simple_queue_dragdrop.js');
+  drupal_add_js(drupal_get_path('module', 'simple_queue')
+      . '/simple_queue_dragdrop.js');
   
   $reverse[str_replace('-', '_', $table_id)] = FALSE;
 
@@ -1173,7 +1199,8 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
       $row[] = drupal_render($form[$key]['date']);      
       $row[] = drupal_render($form[$key]['type']);      
       $row[] = drupal_render($form[$key]['lock']);
-      $row[] = (!empty($form[$key]['edit'])) ? drupal_render($form[$key]['edit']) : '&nbsp;';
+      $row[] = (!empty($form[$key]['edit'])) ? drupal_render($form[$key]['edit'])
+          : '&nbsp;';
       $row[] = drupal_render($form[$key]['remove']);      
 
       $rows[] = array(
@@ -1189,8 +1216,11 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
   }
 
   // Render the main simple_queue table.
-  $header = array(t('Position'), t('Position'), t('Title'), t('Status'), t('Create date'), t('Type'), t('Lock'), array('data' => t('Actions'), 'colspan' => 2));
-  $output .= theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => $table_id, 'class' => $table_classes)));
+  $header = array(t('Position'), t('Position'), t('Title'), t('Status'),
+    t('Create date'), t('Type'), t('Lock'), array('data' 
+      => t('Actions'), 'colspan' => 2));
+  $output .= theme('table', array('header' => $header, 'rows' => $rows,
+    'attributes' => array('id' => $table_id, 'class' => $table_classes)));
 
   return $output;
 }

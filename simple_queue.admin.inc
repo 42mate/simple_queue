@@ -43,7 +43,8 @@ function simple_queue_queues_list() {
     array('data' => t('Title'), 'field' => 'title', 'sort' => 'asc'),
     array('data' => t('Max nodes'), 'field' => 'size'),
     array('data' => t('Nodes quantity'), 'field' => 'nodes'),
-    array('data' => t('Default display'), 'field' => 'default_display', 'sort' => 'asc'),
+    array('data' => t('Default display'), 'field' => 'default_display',
+      'sort' => 'asc'),
     array('data' => t('Direction'), 'field' => 'direction'),
     array('data' => t('Operation')),
   );
@@ -87,11 +88,13 @@ function simple_queue_queues_list() {
   if (!empty($table_sort)) {
     if (strtolower($table_sort['sort']) == 'desc') {
       // Re-indexes array keys; key no longer equals qid.
-      array_multisort($sort_primary, $sort_direction['desc'], $sort_secondary, $queues);
+      array_multisort($sort_primary, $sort_direction['desc'], $sort_secondary,
+          $queues);
     }
     else {
       // Re-indexes array keys; key no longer equals qid.
-      array_multisort($sort_primary, $sort_direction['asc'], $sort_secondary, $queues);
+      array_multisort($sort_primary, $sort_direction['asc'], $sort_secondary,
+          $queues);
     }
   }
 
@@ -99,25 +102,36 @@ function simple_queue_queues_list() {
   foreach ($queues as $queue) {
     $operations = array();
     
-    $operations[] = l(t('View'), 'admin/structure/simple_queue/' . $queue->qid . '/view');
+    $operations[] = l(t('View'), 'admin/structure/simple_queue/' . $queue->qid
+        . '/view');
     
     $simple_queue_title = check_plain($queue->title);
     
     if (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES)
-        || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES) 
+        || (simple_queue_validate_permission(
+            SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES) 
         && simple_queue_validate_queue_same_roles($queue->roles))) {
-      $operations[] = l(t('Edit'), 'admin/structure/simple_queue/' . $queue->qid . '/edit');
+      $operations[] = l(t('Edit'), 'admin/structure/simple_queue/' . $queue->qid
+          . '/edit');
       
-      $simple_queue_title = l(check_plain($queue->title), 'admin/structure/simple_queue/' . $queue->qid . '/edit');
+      $simple_queue_title = l(check_plain($queue->title),
+          'admin/structure/simple_queue/' . $queue->qid . '/edit');
     }
 
     $rows[] = array(
-      array('class' => array('simple_queue-title'), 'data' => $simple_queue_title),
-      array('class' => array('simple_queue-max-nodes'), 'data' => $queue->size == 0 ? t('Infinite') : $queue->size),
-      array('class' => array('simple_queue-nodes'), 'data' => empty($queue->nodes) ? 0 : count($queue->nodes)),
-      array('class' => array('simple_queue-default-display'), 'data' => check_plain(empty($queue->default_display) ? 'default' : $queue->default_display)),
-      array('class' => array('simple_queue-direction'), 'data' => $queue->direction),
-      array('class' => array('simple_queue-operation'), 'data' => implode(' | ', $operations)),
+      array('class' => array('simple_queue-title'), 'data'
+        => $simple_queue_title),
+      array('class' => array('simple_queue-max-nodes'), 'data'
+        => $queue->size == 0 ? t('Infinite') : $queue->size),
+      array('class' => array('simple_queue-nodes'), 'data' 
+        => empty($queue->nodes) ? 0 : count($queue->nodes)),
+      array('class' => array('simple_queue-default-display'), 'data' 
+        => check_plain(empty($queue->default_display) ? 'default'
+            : $queue->default_display)),
+      array('class' => array('simple_queue-direction'), 'data' 
+        => $queue->direction),
+      array('class' => array('simple_queue-operation'), 'data'
+        => implode(' | ', $operations)),
     );
   }
 
@@ -152,13 +166,16 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
     $queue = new simple_queue_queue();
   }
   else {
-    drupal_set_title(t("Simple queue '@title'", array('@title' => $queue->title)), PASS_THROUGH);
+    drupal_set_title(t("Simple queue '@title'", array('@title'
+      => $queue->title)), PASS_THROUGH);
   }
   
   $form['description'] = array(
     '#type' => 'fieldset',
     '#title' => t('Simple queue'),
-    '#description' => t('Nodes put into a queue are added to the back of the queue; when a node is added to a full queue, the node in the front of the queue will be popped out to make room.'),
+    '#description' => t('Nodes put into a queue are added to the back of'
+        . ' the queue; when a node is added to a full queue, the node in the'
+        . ' front of the queue will be popped out to make room.'),
   );
 
   $form['title'] = array(
@@ -178,7 +195,8 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
       'exists' => 'simple_queue_machine_name_exists',
       'source' => array('title'),
     ),
-    '#description' => t('A unique machine-readable name for this queue. It must only contain lowercase letters, numbers, and underscores.'),
+    '#description' => t('A unique machine-readable name for this queue.'
+        . ' It must only contain lowercase letters, numbers, and underscores.'),
   );
 
   if (!empty($queue->name)) {
@@ -193,14 +211,16 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
     '#default_value' => $queue->size,
     '#size' => 2,
     '#maxlength' => 2,
-    '#description' => t('The maximum number of nodes will appear in the queue. Enter 0 for no limit'),
+    '#description' => t('The maximum number of nodes will appear in the queue.'
+        . ' Enter 0 for no limit'),
   );
   
   $form['direction'] = array(
     '#type' => 'checkbox',
     '#title' => t('Direction'),
     '#default_value' => $queue->direction,
-    '#description' => t('How the new nodes are going to be added to the queue. 0 (no marked) means from top, 1 (marked) means from the bottom. .'),
+    '#description' => t('How the new nodes are going to be added to the queue.'
+        . ' 0 (no marked) means from top, 1 (marked) means from the bottom. .'),
   );  
 
   $form['roles'] = array(
@@ -209,7 +229,9 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
     '#required' => TRUE,
     '#default_value' => empty($queue->roles) ? array() : $queue->roles,
     '#options' => user_roles(),
-    '#description' => t('Check each role that can add nodes to the queue. Be sure that roles you want to appear here have "manipulate queues" access in the main access control panel.'),
+    '#description' => t('Check each role that can add nodes to the queue.'
+        . ' Be sure that roles you want to appear here have "manipulate queues"'
+        . ' access in the main access control panel.'),
   );
   
   $form['display'] = array(
@@ -301,9 +323,15 @@ function simple_queue_edit_queue_form_submit($form_id, &$form_state) {
 
   if (!isset($queue->qid)) {
     $queue->new = TRUE;
-  }
+  } 
 
-  $qid = simple_queue_save($queue); // sets $queue->qid if needed.
+  $qid = simple_queue_save($queue); // sets $queue->qid if needed. 
+  
+  if (!isset($queue->new)) {
+    $queue->count = db_query("SELECT COUNT(nid) FROM {simple_queue_nodes}"
+        . " WHERE qid = :qid", array(':qid' => $queue->qid))->fetchField();
+    simple_queue_check_queue_size($queue);
+  }  
 
   if (!empty($queue->new)) {
     $form_state['values']['qid'] = $qid;
@@ -329,7 +357,8 @@ function simple_queue_edit_queue_form_submit($form_id, &$form_state) {
  * Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_edit_queue_form_delete_validate($form, &$form_state) {
-  // TODO No validation for delete step!  But we need to have this so the default validation isn't called.
+  // TODO No validation for delete step!  But we need to have this so
+  //  the default validation isn't called.
 }
 
 /**
@@ -345,7 +374,8 @@ function simple_queue_edit_queue_form_delete_validate($form, &$form_state) {
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_edit_queue_form_delete_submit($form_id, &$form_state) {
-  $form_state['redirect'] = 'admin/structure/simple_queue/' . $form_state['values']['qid'] . '/delete';
+  $form_state['redirect'] = 'admin/structure/simple_queue/'
+      . $form_state['values']['qid'] . '/delete';
 }
 
 /**
@@ -364,7 +394,8 @@ function simple_queue_admin_delete($form, &$form_state, $queue) {
   $form['qid'] = array('#type'  => 'value', '#value' => $queue->qid);
   $destination = filter_input(INPUT_GET, 'destination');
   return confirm_form($form,
-    t('Are you sure you want to delete "%title"?', array('%title' => $queue->title)), 
+    t('Are you sure you want to delete "%title"?',
+        array('%title' => $queue->title)),
     isset($destination) ? $destination : 'admin/structure/simple_queue',
     t('This action cannot be undone.'),
     t('Delete'), t('Cancel')
@@ -412,14 +443,17 @@ function simple_queue_admin_delete_submit($form_id, &$form_state) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_get_all_qids($page_size = 0, $pager_element = 0, $bypass_cache = FALSE) {
+function simple_queue_get_all_qids($page_size = 0, $pager_element = 0,
+    $bypass_cache = FALSE) {
   $cache = &drupal_static(__FUNCTION__, array());
   if ($bypass_cache || empty($cache[$page_size])) {    
 
     // TODO First must validate if the user has the queue list permission. 
-    // If the user has this permission then the view queues same permission is canceled.
+    // If the user has this permission then the view queues same permission
+    //  is canceled.
     if (!simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES) 
-        && simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES)) {
+        &&  simple_queue_validate_permission(
+            SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES)) {
       global $user;
       
       //SELECT r.qid FROM simple_queue_roles r WHERE IN (:rids)
@@ -480,7 +514,8 @@ function simple_queue_get_view_modes_formatted() {
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_nodes_list($queue) {
-  drupal_set_title(t("Simple queue '@title'", array('@title' => $queue->title)), PASS_THROUGH);
+  drupal_set_title(t("Simple queue '@title'", array('@title' => $queue->title)),
+      PASS_THROUGH);
 
   $breadcrumb = drupal_get_breadcrumb();
   $breadcrumb[] = l($queue->title, "admin/structure/simple_queue/$queue->qid");
@@ -505,7 +540,8 @@ function simple_queue_arrange_queue($queue) {
   // get nodes from the queue
   $nodes = _simple_queue_dragdrop_get_nodes($queue);
 
-  return drupal_get_form('simple_queue_arrange_queue_form_' . $queue->qid, $queue, $nodes);
+  return drupal_get_form('simple_queue_arrange_queue_form_'
+      . $queue->qid, $queue, $nodes);
 }
 
 /**
@@ -588,14 +624,19 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
     $form['nodes'][$node->nid]['#node'] = (array) $node;
     if ($node->visible) {     
       $form['nodes'][$node->nid]['#node'] = (array) $node;
-      $form['nodes'][$node->nid]['title'] = array('#markup' => l($node->title, 'node/' . $node->nid));
-      $form['nodes'][$node->nid]['status'] = array('#markup' => intval($node->status) === NODE_PUBLISHED ? t('Published') : t('Not published'));
+      $form['nodes'][$node->nid]['title'] = array('#markup' => l($node->title,
+          'node/' . $node->nid));
+      $form['nodes'][$node->nid]['status'] = array('#markup'
+        => intval($node->status) === NODE_PUBLISHED ? t('Published')
+        : t('Not published'));
       $form['nodes'][$node->nid]['type'] = array('#markup' => $node->type);
       $form['nodes'][$node->nid]['lock'] = array('#markup' => $node->lock);
-      $form['nodes'][$node->nid]['date'] = array('#markup' => format_date($node->created, 'short'));
+      $form['nodes'][$node->nid]['date'] = array('#markup' => 
+        format_date($node->created, 'short'));
     }
     else {
-      $form['nodes'][$node->nid]['title'] = array('#value' => t('Restricted node, NID: @nid', array('@nid' => $node->nid)));
+      $form['nodes'][$node->nid]['title'] = array('#value' =>
+        t('Restricted node, NID: @nid', array('@nid' => $node->nid)));
       $form['nodes'][$node->nid]['status'] = array('#value' => '');
       $form['nodes'][$node->nid]['type'] = array('#value' => '');
       $form['nodes'][$node->nid]['lock'] = array('#value' => '');
@@ -603,7 +644,9 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
     }
 
     if (node_access('update', $node)) {
-      $form['nodes'][$node->nid]['edit'] = array('#markup' => l(t('edit'), 'node/' . $node->nid . '/edit', array('attributes' => array('title' => t('Edit this node')))));
+      $form['nodes'][$node->nid]['edit'] = array('#markup' =>
+        l(t('edit'), 'node/' . $node->nid . '/edit', array('attributes'
+          => array('title' => t('Edit this node')))));
     }
     $form['nodes'][$node->nid]['position'] = array(
       '#type' => 'position',
@@ -624,12 +667,15 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
       'query' => simple_queue_get_query_string($node->nid, TRUE),
     );
 
-    $form['nodes'][$node->nid]['remove'] = array('#markup' => l(t('remove'), 'admin/structure/simple_queue/' . $queue->qid . '/remove-node/' . $node->nid, $attr));
+    $form['nodes'][$node->nid]['remove'] = array('#markup' => l(t('remove'),
+        'admin/structure/simple_queue/' . $queue->qid . '/remove-node/'
+        . $node->nid, $attr));
   }
 
   // Validate permission to add node to the queue.
   if ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES)
-        || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES)
+        || (simple_queue_validate_permission(
+            SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES)
         && simple_queue_validate_queue_same_roles($queue->roles)))) {    
     
     // Textfield for adding nodes to the queue.
@@ -706,7 +752,8 @@ function simple_queue_arrange_queue_form_validate($form, &$form_state) {
 }
 
 /**
- * Submit handler for simple_queue drag'n'drop form. Updates node positions in {simple_queue_nodes}.
+ * Submit handler for simple_queue drag'n'drop form. Updates node positions
+ *  in {simple_queue_nodes}.
  * 
  * @param 
  *   array $form Allow access to the form.
@@ -790,7 +837,8 @@ function simple_queue_save_queue_order($nodes, $qid) {
   drupal_alter('simple_queue_sort', $nodes);
   foreach ($nodes as $pos => $node) {
     if (!is_numeric($node['nid']) || $node['nid'] < 1) {
-      return array(SIMPLE_QUEUE_INVALID_NID, 'Invalid nid value. New queue order not saved.');
+      return array(SIMPLE_QUEUE_INVALID_NID,
+        'Invalid nid value. New queue order not saved.');
     }
     if (is_numeric($pos)) {
       $clean[$count] = $node;
@@ -801,7 +849,8 @@ function simple_queue_save_queue_order($nodes, $qid) {
       simple_queue_queue_remove_node($qid, $node['nid']);
     }
     else {
-      return array(SIMPLE_QUEUE_INVALID_POSITION, 'Invalid position value. New queue order not saved.');
+      return array(SIMPLE_QUEUE_INVALID_POSITION,
+        'Invalid position value. New queue order not saved.');
     }
   }
   $nodes = $clean;
@@ -809,10 +858,12 @@ function simple_queue_save_queue_order($nodes, $qid) {
   array_walk($clean, create_function('&$node', '$node = serialize($node);'));
 
   if (count(array_unique($clean)) < count($nodes)) {
-    return array(SIMPLE_QUEUE_DUPLICATE_POSITION, 'Duplicate position values are not allowed. New queue order not saved.');
+    return array(SIMPLE_QUEUE_DUPLICATE_POSITION,
+      'Duplicate position values are not allowed. New queue order not saved.');
   }
   // Allow other modules to alter the order of nodes.
-  foreach (module_implements('simple_queue_save_queue_order_alter') as $module) {
+  foreach (module_implements('simple_queue_save_queue_order_alter')
+      as $module) {
     $function = $module . '_simple_queue_save_queue_order_alter';
     $function($qid, $nodes);
   }
@@ -837,7 +888,8 @@ function simple_queue_save_queue_order($nodes, $qid) {
   }
 
   if ($queue->size) {
-    // only necessary if the queue is of finite length
+    // only necessary if the queue is of finite length    
+    $queue->count = count($queue->nodes);
     simple_queue_check_queue_size($queue);
   }
 
@@ -858,7 +910,9 @@ function simple_queue_save_queue_order($nodes, $qid) {
  */
 function simple_queue_arrange_queue_form_add_validate($form, &$form_state) {
   // Validate textfield add.
-  if (empty($form_state['values']['add']['nid']) || ($form_state['values']['add']['nid'] === t('Enter the title of a node to add it to the queue'))) {
+  if (empty($form_state['values']['add']['nid']) ||
+      ($form_state['values']['add']['nid'] === 
+      t('Enter the title of a node to add it to the queue'))) {
     form_set_error('Node title', t('Please enter a title for the node.'));
   }  
 }
@@ -880,7 +934,8 @@ function simple_queue_arrange_queue_form_add_submit($form, &$form_state) {
   
   if (!empty($form_state['values']['add']['nid'])) {
     $matches = array();
-    preg_match('/\[nid: (\d+)\]$/', $form_state['values']['add']['nid'], $matches);
+    preg_match('/\[nid: (\d+)\]$/', $form_state['values']['add']['nid'],
+        $matches);
 
     $nid = empty($matches) ? $matches : $matches[1];
     if (empty($nid)) {

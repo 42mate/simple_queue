@@ -27,7 +27,8 @@ function simple_queue_schema() {
         'not null' => TRUE
       ),
       'name' => array(
-        'description' => 'The machine name of the queue, only letters, numbers and _ no white spaces. The machine name',
+        'description' => 'The machine name of the queue, only letters,'
+        . ' numbers and _ no white spaces. The machine name',
         'type' => 'varchar',
         'length' => 128,
       ),
@@ -38,17 +39,20 @@ function simple_queue_schema() {
         'not null' => TRUE,
       ),
       'size' => array(
-        'description' => 'Integer Max num of items of the queue, 0 means infinite',
+        'description' => 'Integer Max num of items of the queue,'
+        . ' 0 means infinite',
         'type' => 'int',
         'default' => 0,
       ),
       'default_display' => array(
-        'description' => 'Name of a drupal display, like default and teaser. The default display for the node rendering in the queue.',
+        'description' => 'Name of a drupal display, like default and teaser.'
+        . ' The default display for the node rendering in the queue.',
         'type' => 'varchar',
         'length' => '64',
       ),
       'direction' => array(
-        'description' => 'How the new nodes are going to be added to the queue. 0 means from top, 1 means from the bottom. Default add to top',
+        'description' => 'How the new nodes are going to be added to the queue.'
+        . ' 0 means from top, 1 means from the bottom. Default add to top',
         'type' => 'int',
         'size' => 'tiny',
         'default' => 0,
@@ -125,7 +129,8 @@ function simple_queue_schema() {
         'not null' => FALSE
       ),
       'timestamp' => array(
-        'description' => "The time that the item's position in the queue was updated.",
+        'description' => "The time that the item's position in"
+        . " the queue was updated.",
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
@@ -137,7 +142,8 @@ function simple_queue_schema() {
         'length' => '64',
       ),
       'lock' => array(
-        'description' => 'Boolean indicating whether the node is lock. To default the node is not lock',
+        'description' => 'Boolean indicating whether the node is lock.'
+        . ' To default the node is not lock',
         'type' => 'int',
         'size' => 'tiny',
         'default' => 0,
