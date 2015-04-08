@@ -86,10 +86,12 @@ function simple_queue_queues_list() {
 
   if (!empty($table_sort)) {
     if (strtolower($table_sort['sort']) == 'desc') {
-      array_multisort($sort_primary, $sort_direction['desc'], $sort_secondary, $queues); // Re-indexes array keys; key no longer equals qid.
+      // Re-indexes array keys; key no longer equals qid.
+      array_multisort($sort_primary, $sort_direction['desc'], $sort_secondary, $queues);
     }
     else {
-      array_multisort($sort_primary, $sort_direction['asc'], $sort_secondary, $queues); // Re-indexes array keys; key no longer equals qid.
+      // Re-indexes array keys; key no longer equals qid.
+      array_multisort($sort_primary, $sort_direction['asc'], $sort_secondary, $queues);
     }
   }
 
@@ -446,11 +448,11 @@ function simple_queue_get_all_qids($page_size = 0, $pager_element = 0, $bypass_c
 
 /**
  * Get view modes formatted.
- * 
- * @return 
- *   array view modes formatted.
- * 
- * @author  
+ *
+ * @return array
+ *   View modes formatted.
+ *
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_get_view_modes_formatted() {

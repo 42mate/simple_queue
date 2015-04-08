@@ -1,13 +1,13 @@
 <?php
 /**
+ * @file
+ *   Queues of Nodes for multiple propouses.
+ *
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  * 
  * @package 
  *   42mate.
- * 
- * @file    
- *   Queues management.
  */
 
 // Constant variables.
@@ -104,7 +104,8 @@ function simple_queue_menu() {
     'access arguments' => array(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES),
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_NORMAL_ITEM,
-  );  
+  );
+
   $items['admin/structure/simple_queue/list'] = array(
     'title' => 'List',
     'description' => 'List all queues, for other story.',
@@ -594,20 +595,68 @@ function simple_queue_api_autocomplete($queue, $string) {
 }
 
 /**
- * Load a simple_queue.
+ * Loads a Queue by ID.
  *
- * @param 
- *   string $qid The qid of the queue to load.
- * 
- * @return 
- *   array a queue.
- * 
- * @author  
- *   Daniel Anzawa daniel@42mate.com.
+ * @param $queue
+ *   Int or String : Queue ID or Queue Name
+ *
+ * @return stdClass
+ *  The Queue object with nodes or False is can't be found.
  */
-function simple_queue_load($qid) {
-  $queues = simple_queue_load_queues(array($qid));
-  return !empty($queues) ? array_shift($queues) : array();
+function simple_queue_load($queue) {
+  if (intval($queue) !== 0) {
+    $queue = simple_queue_retrieve_queue_by_id($queue);
+  }
+  else {
+    $queue = simple_queue_retrieve_queue_by_name($queue);
+  }
+
+  if (!$queue) {
+    return FALSE; //There is no queue.
+  }
+
+  $result_roles = db_select('simple_queue_roles', 'r')
+    ->fields('r', array('rid'))
+    ->condition('r.qid', $queue->qid, '=')
+    ->execute()
+    ->fetchAll();
+
+  $roles = array();
+
+  foreach ($result_roles as $key => $role) {
+    $roles[$key] = $role->rid;
+  }
+
+  $queue->roles = $roles;
+
+  $result_types = db_select('simple_queue_types', 't')
+    ->fields('t', array('type'))
+    ->condition('t.qid', $queue->qid, '=')
+    ->execute()
+    ->fetchAll();
+
+  $types = array();
+
+  foreach ($result_types as $key => $type) {
+    $types[$key] = $type->type;
+  }
+
+  $queue->types = $types;
+
+  $nodes = db_select('simple_queue_nodes', 'n')
+    ->fields('n')
+    ->condition('n.qid', $queue->qid, '=')
+    ->execute()
+    ->fetchAll();
+
+  if ($nodes) {
+    $queue->nodes = $nodes;
+  }
+  else {
+    $queue->nodes = array();
+  }
+
+  return $queue;
 }
 
 // --------------------------------------------------------------------------
@@ -859,17 +908,14 @@ function simple_queue_access($permission, $queue = NULL) {
 
 /**
  * Validate permission.
- * 
- * @global 
- *   object $user.
- * 
- * @param 
+ *
+ * @param
  *   array $permission the permission types.
- * 
- * @return 
- *   boolean.
- * 
- * @author  
+ *
+ * @global
+ *   object $user.
+ *
+ * @return bool boolean.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_validate_permission($permission) {
@@ -886,17 +932,14 @@ function simple_queue_validate_permission($permission) {
 
 /**
  * Validate if the user has the same roles than queue.
- * 
- * @global 
- *   object $user.
- * 
- * @param 
+ *
+ * @param
  *   array $rids roles from queue.
- * 
- * @return 
- *   boolean.
- * 
- * @author  
+ *
+ * @global
+ *   object $user.
+ *
+ * @return bool boolean.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_validate_queue_same_roles($rids) {
@@ -1201,4 +1244,67 @@ function theme_simple_queue_queue_full_text() {
  */
 function theme_simple_queue_queue_count_text($variables) {
   return t('@count in queue', array('@count' => $variables['count']));
+}
+
+/**
+ * Gets a queue from the database by id.
+ *
+ * @param $qid
+ *
+ * @return stdClass
+ *
+ */
+function simple_queue_retrieve_queue_by_id($qid) {
+  $queue = db_select('simple_queue_queue', 'q')
+    ->fields('q')
+    ->condition('q.qid', $qid, '=')
+    ->execute()
+    ->fetch();
+  return $queue;
+}
+
+/**
+ * Gets a queue from the database by name.
+ *
+ * @param $queue_name
+ *
+ * @return stdClass
+ *
+ */
+function simple_queue_retrieve_queue_by_name($queue_name) {
+  $queue = db_select('simple_queue_queue', 'q')
+    ->fields('q')
+    ->condition('q.name', $queue_name, '=')
+    ->execute()
+    ->fetch();
+  return $queue;
+}
+
+/**
+ * Renders a Queue.
+ *
+ * @param $queue
+ *   Queue Name or ID.
+ *
+ * @return array
+ *   expected by drupal_render().
+ */
+function simple_queue_render($queue) {
+  $queue = simple_queue_load($queue);
+
+  if ($queue) {
+    $render = array(
+      '#show_messages' => TRUE,
+      '#type' => 'container',
+      '#attributes' => array('class' => 'queue-' . $queue->name),
+      'nodes' => array(),
+    );
+
+    foreach ($queue->nodes as $queue_node) {
+      $node = node_load($queue_node->nid);
+      $render['nodes'][] = node_view($node, $queue_node->display);
+    }
+  }
+
+  return $render;
 }
