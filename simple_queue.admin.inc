@@ -588,10 +588,6 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
       $form['nodes'][$node->nid]['#node'] = (array) $node;
       $form['nodes'][$node->nid]['title'] = array('#markup' => l($node->title,
           'node/' . $node->nid));
-      // $form['nodes'][$node->nid]['status'] = array('#markup'
-      //    => intval($node->status) === NODE_PUBLISHED ? t('Published')
-      //    : t('Not published'));
-      //die(var_dump($node));
       $form['nodes'][$node->nid]['status'] = array(
         '#type' => 'select',
         '#options' => array(
@@ -601,15 +597,15 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
         '#default_value' => intval($node->status),
       );
       $form['nodes'][$node->nid]['type'] = array('#markup' => $node->type);
-      // $form['nodes'][$node->nid]['lock'] = array('#markup' => $node->lock);
-      $form['nodes'][$node->nid]['locked'] = array(
+      $form['nodes'][$node->nid]['locked'] = simple_queue_validate_permission(
+          SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES) ? array(
         '#type' => 'select',
         '#options' => array(
           0,
           1,
         ),
         '#default_value' => intval($node->locked),
-      );
+      ) : array('#markup' => $node->locked);
       $form['nodes'][$node->nid]['date'] = array('#markup' => 
         format_date($node->created, 'short'));
     }

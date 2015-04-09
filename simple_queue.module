@@ -934,6 +934,9 @@ function simple_queue_access($permission, $queue = NULL) {
           || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES) 
           && simple_queue_validate_queue_same_roles($rids)));    
       break;
+    case SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES:
+      $access = simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES);
+      break;
   }
   
   return $access;
