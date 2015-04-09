@@ -43,13 +43,7 @@ function simple_queue_schema() {
         . ' 0 means infinite',
         'type' => 'int',
         'default' => 0,
-      ),
-      'default_display' => array(
-        'description' => 'Name of a drupal display, like default and teaser.'
-        . ' The default display for the node rendering in the queue.',
-        'type' => 'varchar',
-        'length' => '64',
-      ),
+      ),      
       'direction' => array(
         'description' => 'How the new nodes are going to be added to the queue.'
         . ' 0 means from top, 1 means from the bottom. Default add to top',
@@ -100,6 +94,12 @@ function simple_queue_schema() {
         'length' => 32,
         'not null' => FALSE
       ),
+      'default_display' => array(
+        'description' => 'Name of a drupal display, like default and teaser.'
+        . ' The default display for the node rendering in the queue.',
+        'type' => 'varchar',
+        'length' => '64',
+      ),
     ), // fields.
     'indexes' => array(
       'qid' => array('qid'),
@@ -141,11 +141,12 @@ function simple_queue_schema() {
         'type' => 'varchar',
         'length' => '64',
       ),
-      'lock' => array(
-        'description' => 'Boolean indicating whether the node is lock.'
-        . ' To default the node is not lock',
+      'locked' => array(
+        'description' => 'Boolean indicating whether the node is locked.'
+        . ' To default the node is not locked',
         'type' => 'int',
         'size' => 'tiny',
+        'not null' => TRUE,
         'default' => 0,
       ),
     ), // fields.

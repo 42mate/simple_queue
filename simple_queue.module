@@ -26,7 +26,7 @@ define('SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES', 'delete same roles qu
 define('SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES', 'view same roles queues');
 define('SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES', 'add nodes queues');
 define('SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES', 'add nodes same roles queues');
-define('SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES', 'lock unlock nodes');
+define('SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES', 'locked unlocked nodes');
 define('SIMPLE_QUEUE_PERMISSION_LIST_QUEUES', 'list queue');
 
 /* --- HOOKS ---------------------------------------------------------------- */
@@ -77,7 +77,7 @@ function simple_queue_permission() {
     ),
     SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES => array(
       'title' => t('Lock unlock nodes'),
-      'description' => t('Can lock / unlock nodes.'),
+      'description' => t('Can locked / unlocked nodes.'),
     ),
     SIMPLE_QUEUE_PERMISSION_LIST_QUEUES => array(
       'title' => t('List queues'),
@@ -365,7 +365,7 @@ function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
     }
     
     $result = db_query("SELECT n.qid, n.nid, n.position, n.timestamp,"
-        . " n.display, n.lock FROM {simple_queue_nodes} n WHERE n.qid"
+        . " n.display, n.locked FROM {simple_queue_nodes} n WHERE n.qid"
         . " IN (:to_load)", array(':to_load' => $to_load));  
     foreach ($result as $obj) {  
       $node = NULL;
@@ -411,7 +411,6 @@ function simple_queue_save(&$queue) {
     'title' => $queue->title,
     'size' => $queue->size,
     'direction' => $queue->direction,
-    'default_display' => $queue->display,
   );
 
   if (!isset($queue->qid)) {
@@ -1145,6 +1144,34 @@ function simple_queue_js_output($label, $href, $count = NULL, $qid = NULL) {
   exit;
 }
 
+/**
+ * Update of the property of the node.
+ * 
+ * @param 
+ *   string $nid id of node.
+ * 
+ * @param 
+ *   string $property property of the node.
+ * 
+ * @param 
+ *   var $value value to set to the property.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ * 
+ */
+function simple_queue_node_update($nid, $property, $value) {
+  // load the node object
+  $node = node_load($nid);    
+
+  if ($node && property_exists($node, $property)) {
+    // set $property to $value
+    $node->$property = $value;
+    // re-save the node
+    node_save($node);
+  }  
+}
+
 /* --- THEME ---------------------------------------------------------------- */
 
 /**
@@ -1212,10 +1239,10 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
       $row[] = drupal_render($form[$key]['status']);        
       $row[] = drupal_render($form[$key]['date']);      
       $row[] = drupal_render($form[$key]['type']);      
-      $row[] = drupal_render($form[$key]['lock']);
+      $row[] = drupal_render($form[$key]['locked']);
       $row[] = (!empty($form[$key]['edit'])) ? drupal_render($form[$key]['edit'])
           : '&nbsp;';
-      $row[] = drupal_render($form[$key]['remove']);      
+      $row[] = drupal_render($form[$key]['remove']);   
 
       $rows[] = array(
         'data'  => $row,
@@ -1231,7 +1258,7 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
 
   // Render the main simple_queue table.
   $header = array(t('Position'), t('Position'), t('Title'), t('Status'),
-    t('Create date'), t('Type'), t('Lock'), array('data' 
+    t('Create date'), t('Type'), t('Locked'), array('data' 
       => t('Actions'), 'colspan' => 2));
   $output .= theme('table', array('header' => $header, 'rows' => $rows,
     'attributes' => array('id' => $table_id, 'class' => $table_classes)));

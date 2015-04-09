@@ -43,8 +43,6 @@ function simple_queue_queues_list() {
     array('data' => t('Title'), 'field' => 'title', 'sort' => 'asc'),
     array('data' => t('Max nodes'), 'field' => 'size'),
     array('data' => t('Nodes quantity'), 'field' => 'nodes'),
-    array('data' => t('Default display'), 'field' => 'default_display',
-      'sort' => 'asc'),
     array('data' => t('Direction'), 'field' => 'direction'),
     array('data' => t('Operation')),
   );
@@ -73,10 +71,6 @@ function simple_queue_queues_list() {
       case 'nodes':
         $sort_primary[] = empty($queue->nodes) ? 0 : count($queue->nodes);
         $sort_direction = $sort_direction_reverse;
-        break;
-      case 'default_display':
-        $sort_primary[] = $queue->default_display;
-        $sort_direction = $sort_direction_regular;
         break;
       case 'direction':
         $sort_primary[] = $queue->direction;
@@ -125,9 +119,6 @@ function simple_queue_queues_list() {
         => $queue->size == 0 ? t('Infinite') : $queue->size),
       array('class' => array('simple_queue-nodes'), 'data' 
         => empty($queue->nodes) ? 0 : count($queue->nodes)),
-      array('class' => array('simple_queue-default-display'), 'data' 
-        => check_plain(empty($queue->default_display) ? 'default'
-            : $queue->default_display)),
       array('class' => array('simple_queue-direction'), 'data' 
         => $queue->direction),
       array('class' => array('simple_queue-operation'), 'data'
@@ -232,14 +223,6 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
     '#description' => t('Check each role that can add nodes to the queue.'
         . ' Be sure that roles you want to appear here have "manipulate queues"'
         . ' access in the main access control panel.'),
-  );
-  
-  $form['display'] = array(
-    '#title' => t('Default display'),
-    '#type' => 'select',
-    '#description' => t('Select the view mode.'),
-    '#options' => simple_queue_get_view_modes_formatted(),
-    '#default_value' => $queue->default_display,
   );
   
   $form['types'] = array(
@@ -481,27 +464,6 @@ function simple_queue_get_all_qids($page_size = 0, $pager_element = 0,
 }
 
 /**
- * Get view modes formatted.
- *
- * @return array
- *   View modes formatted.
- *
- * @author
- *   Daniel Anzawa daniel@42mate.com.
- */
-function simple_queue_get_view_modes_formatted() {
-  $view_mode_formatted = array("" => 'Default');
-
-  foreach (entity_get_info('node')['view modes'] as $key => $value) {
-    if ($value['custom settings']) {
-      $view_mode_formatted[$key] = $value['label'];
-    }    
-  }
-
-  return $view_mode_formatted;
-}
-
-/**
  * Page callback to view a queue.
  * 
  * @param 
@@ -578,14 +540,14 @@ function _simple_queue_dragdrop_get_nodes($queue) {
     $nids[] = $sq_node->nid;
     // Save node position in a separate array so we can reference it later.
     $sq_nodes[$sq_node->nid]['position'] = $sq_node->position;
-    $sq_nodes[$sq_node->nid]['lock'] = $sq_node->lock;
+    $sq_nodes[$sq_node->nid]['locked'] = $sq_node->locked;
   }
   $nodes = node_load_multiple($nids);
 
   foreach ($nodes as $node) {
     $node->visible = isset($visible[$node->nid]) ? TRUE : FALSE;
     $node->position = $sq_nodes[$node->nid]['position'];
-    $node->lock = $sq_nodes[$node->nid]['lock'];
+    $node->locked = $sq_nodes[$node->nid]['locked'];
   }
 
   return $nodes;
@@ -626,11 +588,28 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
       $form['nodes'][$node->nid]['#node'] = (array) $node;
       $form['nodes'][$node->nid]['title'] = array('#markup' => l($node->title,
           'node/' . $node->nid));
-      $form['nodes'][$node->nid]['status'] = array('#markup'
-        => intval($node->status) === NODE_PUBLISHED ? t('Published')
-        : t('Not published'));
+      // $form['nodes'][$node->nid]['status'] = array('#markup'
+      //    => intval($node->status) === NODE_PUBLISHED ? t('Published')
+      //    : t('Not published'));
+      //die(var_dump($node));
+      $form['nodes'][$node->nid]['status'] = array(
+        '#type' => 'select',
+        '#options' => array(
+          NODE_NOT_PUBLISHED => t('Not published'),
+          NODE_PUBLISHED => t('Published'),
+        ),
+        '#default_value' => intval($node->status),
+      );
       $form['nodes'][$node->nid]['type'] = array('#markup' => $node->type);
-      $form['nodes'][$node->nid]['lock'] = array('#markup' => $node->lock);
+      // $form['nodes'][$node->nid]['lock'] = array('#markup' => $node->lock);
+      $form['nodes'][$node->nid]['locked'] = array(
+        '#type' => 'select',
+        '#options' => array(
+          0,
+          1,
+        ),
+        '#default_value' => intval($node->locked),
+      );
       $form['nodes'][$node->nid]['date'] = array('#markup' => 
         format_date($node->created, 'short'));
     }
@@ -639,7 +618,7 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
         t('Restricted node, NID: @nid', array('@nid' => $node->nid)));
       $form['nodes'][$node->nid]['status'] = array('#value' => '');
       $form['nodes'][$node->nid]['type'] = array('#value' => '');
-      $form['nodes'][$node->nid]['lock'] = array('#value' => '');
+      $form['nodes'][$node->nid]['locked'] = array('#value' => '');
       $form['nodes'][$node->nid]['date'] = array('#value' => '');
     }
 
@@ -825,7 +804,7 @@ function simple_queue_admin_remove_node($queue, $node) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_save_queue_order($nodes, $qid) {
+function simple_queue_save_queue_order($nodes, $qid) {    
   $now = REQUEST_TIME;
 
   $queue = simple_queue_load($qid);
@@ -872,16 +851,17 @@ function simple_queue_save_queue_order($nodes, $qid) {
   db_delete('simple_queue_nodes')
     ->condition('qid', $qid)
     ->execute();
-  foreach ($nodes as $pos => $node) {
-
+  foreach ($nodes as $pos => $node) {    
     if ($pos != 'r') {
+      simple_queue_node_update($node['nid'], 'status', $node['data']['status']);
       db_insert('simple_queue_nodes')
         ->fields(array(
           'qid' => $qid,
-          'nid' => $node['nid'],
+          'nid' => $node['nid'],          
           'position' => $pos,
           'timestamp' => $now,
           'display' => '',
+          'locked' => $node['data']['locked'],
         ))
         ->execute();
     }
