@@ -601,6 +601,8 @@ function simple_queue_api_autocomplete($queue, $string) {
   if (!$match) {
     $match = preg_match('/^nid: (\d+)/', $string, $preg_matches);
   }
+  
+  $query->orderBy('n.changed', 'DESC');
 
   if ($match) {
     // If it found a nid via specification, reduce our resultset to just that nid.
