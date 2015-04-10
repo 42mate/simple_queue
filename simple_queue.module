@@ -358,10 +358,10 @@ function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
       $loaded[$obj->qid]->roles[] = $obj->rid;
     }
 
-    $result = db_query("SELECT qid, type FROM {simple_queue_types} WHERE qid"
+    $result = db_query("SELECT qid, type, default_display FROM {simple_queue_types} WHERE qid"
         . " IN (:to_load)", array(':to_load' => $to_load));
     foreach ($result as $obj) {
-      $loaded[$obj->qid]->types[] = $obj->type;
+      $loaded[$obj->qid]->types[] = $obj;
     }
     
     $result = db_query("SELECT n.qid, n.nid, n.position, n.timestamp,"
@@ -456,7 +456,8 @@ function simple_queue_save(&$queue) {
       db_insert('simple_queue_types')
         ->fields(array(
           'qid' => $queue->qid,
-          'type' => $type,
+          'type' => $type['type'],
+          'default_display' => $type['default_display'],
         ))
         ->execute();
     }
@@ -585,7 +586,7 @@ function simple_queue_api_autocomplete($queue, $string) {
     ->range(0, variable_get('simple_queue_autocomplete_limit', 10));
 
   if (!empty($queue->types)) {
-    $query->condition('n.type', $queue->types, 'IN')->condition('n.status', 1);
+    $query->condition('n.type', simple_queue_get_attribute_from_objects($queue->types, 'type'), 'IN')->condition('n.status', 1);
   }
 
   global $user;
@@ -660,7 +661,7 @@ function simple_queue_load($queue) {
   $queue->roles = $roles;
 
   $result_types = db_select('simple_queue_types', 't')
-    ->fields('t', array('type'))
+    ->fields('t', array('type', 'default_display'))
     ->condition('t.qid', $queue->qid, '=')
     ->execute()
     ->fetchAll();
@@ -668,11 +669,11 @@ function simple_queue_load($queue) {
   $types = array();
 
   foreach ($result_types as $key => $type) {
-    $types[$key] = $type->type;
+    $types[$key] = $type;
   }
 
   $queue->types = $types;
-
+  
   $nodes = db_select('simple_queue_nodes', 'n')
     ->fields('n')
     ->condition('n.qid', $queue->qid, '=')
@@ -1163,16 +1164,94 @@ function simple_queue_js_output($label, $href, $count = NULL, $qid = NULL) {
  *   Daniel Anzawa daniel@42mate.com.
  * 
  */
-function simple_queue_node_update($nid, $property, $value) {
+function simple_queue_node_custom_update($nid, $property, $value) {
   // load the node object
-  $node = node_load($nid);    
+  $node = node_load($nid); 
 
   if ($node && property_exists($node, $property)) {
     // set $property to $value
-    $node->$property = $value;
+    $node->$property = $value;    
     // re-save the node
     node_save($node);
   }  
+}
+
+/**
+ * Get view modes formatted.
+ *
+ * @param 
+ *   $bundle The bundle name to return view mode settings for.
+ *
+ * @return 
+ *   array View modes formatted.
+ *
+ * @author
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_get_view_modes_formatted($bundle) {
+  $view_mode_formatted = array("" => 'Default');
+
+  $entity_info = entity_get_info('node');
+  $view_modes = $entity_info['view modes'];
+
+  $view_mode_settings = field_view_mode_settings('node', $bundle);
+  foreach ($view_modes as $view_mode_name => $view_mode_info) {
+    if (!empty($view_mode_settings[$view_mode_name]['custom_settings'])) {
+      $view_mode_formatted[$view_mode_name] = $view_mode_info['label'];
+    }
+  }   
+
+  return $view_mode_formatted;  
+}
+
+/**
+ * Get attribute from objects.
+ * 
+ * @param 
+ *   array $objects an array of types.
+ * 
+ * @param 
+ *   var $attribute Attribute to change.
+ * 
+ * @return 
+ *   array an array with the attribute.
+ * 
+ * @author
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_get_attribute_from_objects($objects, $attribute) {
+  $attributes = array();
+  
+  foreach ($objects as $key => $value) {
+    $attributes[$key] = $value->$attribute;
+  }
+  
+  return $attributes;
+}
+
+/**
+ * Get default_display from types.
+ * 
+ * @param 
+ *   array $types an array with type.
+ * 
+ * @param 
+ *   string $type content type.
+ * 
+ * @return
+ *    string default_display.
+ * 
+ * @author
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function get_default_display_from_types($types, $type) {
+  foreach ($types as $value) {
+    if ($value->type === $type) {
+      return $value->default_display;
+    } 
+  }
+      
+  return '';
 }
 
 /* --- THEME ---------------------------------------------------------------- */

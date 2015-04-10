@@ -225,14 +225,30 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
         . ' access in the main access control panel.'),
   );
   
+  $node_type_names = node_type_get_names();
+  
   $form['types'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Types'),
     '#required' => TRUE, 
-    '#default_value' => $queue->types,
-    '#options' => node_type_get_names(), // Returns a list of available node type names.
+    '#default_value' => empty($queue->types) ? array() : simple_queue_get_attribute_from_objects($queue->types, 'type'),
+    '#options' => $node_type_names, // Returns a list of available node type names.
     '#description' => t('Check each node type that can be added to this queue.'),
   );
+  
+  foreach ($node_type_names as $key => $value) {
+    $form[$key] = array(
+      '#title' => check_plain(t('Select view mode to default for ' . $value)),
+      '#type' => 'select',
+      '#options' => simple_queue_get_view_modes_formatted($key),
+      '#default_value' => empty($queue->types) ? array() : get_default_display_from_types($queue->types, $key),
+      '#states' => array(      
+        'visible' => array(
+          ':input[name="types[' . $key . ']"]' => array('checked' => TRUE),
+        ),
+      ),
+    );
+  } 
   
   // In case of edit queue.  
   if (isset($queue->qid)) {
@@ -298,11 +314,20 @@ function simple_queue_edit_queue_form_validate($form, &$form_state) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_edit_queue_form_submit($form_id, &$form_state) {
+function simple_queue_edit_queue_form_submit($form_id, &$form_state) {  
   $queue = (object) $form_state['values'];
+
   // Fix checkboxes.
   $queue->roles = array_keys(array_filter($queue->roles));
-  $queue->types = array_keys(array_filter($queue->types)); 
+  $types_names = array_keys(array_filter($queue->types));
+  $queue->types = array();
+  
+  foreach ($types_names as $value) {
+    $type = array();
+    $type['type'] = $value;
+    $type['default_display'] = $queue->$value;
+    array_push($queue->types, $type);
+  }
 
   if (!isset($queue->qid)) {
     $queue->new = TRUE;
@@ -475,7 +500,7 @@ function simple_queue_get_all_qids($page_size = 0, $pager_element = 0,
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_nodes_list($queue) {
+function simple_queue_nodes_list($queue) {  
   drupal_set_title(t("Simple queue '@title'", array('@title' => $queue->title)),
       PASS_THROUGH);
 
@@ -498,7 +523,7 @@ function simple_queue_nodes_list($queue) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_arrange_queue($queue) {
+function simple_queue_arrange_queue($queue) {  
   // get nodes from the queue
   $nodes = _simple_queue_dragdrop_get_nodes($queue);
 
@@ -549,7 +574,7 @@ function _simple_queue_dragdrop_get_nodes($queue) {
     $node->position = $sq_nodes[$node->nid]['position'];
     $node->locked = $sq_nodes[$node->nid]['locked'];
   }
-
+  
   return $nodes;
 }
 
@@ -592,7 +617,7 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
         '#type' => 'select',
         '#options' => array(
           NODE_NOT_PUBLISHED => t('Not published'),
-          NODE_PUBLISHED => t('Published'),
+          NODE_PUBLISHED => t('Published'),         
         ),
         '#default_value' => intval($node->status),
       );
@@ -849,7 +874,8 @@ function simple_queue_save_queue_order($nodes, $qid) {
     ->execute();
   foreach ($nodes as $pos => $node) {    
     if ($pos != 'r') {
-      simple_queue_node_update($node['nid'], 'status', $node['data']['status']);
+      simple_queue_node_custom_update($node['nid'],
+          'status', $node['data']['status']);
       db_insert('simple_queue_nodes')
         ->fields(array(
           'qid' => $qid,
