@@ -464,7 +464,7 @@ function simple_queue_get_all_qids($page_size = 0, $pager_element = 0,
             SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES)) {
       global $user;
       
-      //SELECT r.qid FROM simple_queue_roles r WHERE IN (:rids)
+      // SELECT r.qid FROM simple_queue_roles r WHERE IN (:rids)
       $query = db_select('simple_queue_roles', 'r')
         ->fields('r', array('qid'))
         ->condition('r.rid', array_keys($user->roles), 'IN');
@@ -544,7 +544,7 @@ function simple_queue_arrange_queue($queue) {
  *   Daniel Anzawa daniel@42mate.com.
  */
 function _simple_queue_dragdrop_get_nodes($queue) {
-  //$order = $queue->reverse ? 'DESC' : 'ASC';
+  // $order = $queue->reverse ? 'DESC' : 'ASC';
 
   $visible = simple_queue_nids_visible($queue->qid);
 
@@ -556,7 +556,7 @@ function _simple_queue_dragdrop_get_nodes($queue) {
   $query->fields('n', array('nid'))
     ->fields('nq')
     ->condition('nq.qid', $queue->qid);
-    //->orderBy('nq.position', $order);
+    // ->orderBy('nq.position', $order);
   $result = $query->execute();
  
   $nids = array();
@@ -711,6 +711,11 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
     '#value' => t('Clear'),
     '#submit' => array('simple_queue_arrange_queue_form_clear_submit'),
   );
+  $form['actions']['fill'] = array(
+    '#type' => 'submit',
+    '#value' => t('Fill'),
+    '#submit' => array('simple_queue_arrange_queue_form_fill_submit'),
+  );
 
   // Disable all buttons if the queue is empty.
   if ($count == 0) {
@@ -781,6 +786,41 @@ function simple_queue_arrange_queue_form_submit($form, &$form_state) {
   simple_queue_save_queue_order($nodes, $qid);
 
   drupal_set_message(t('@message', array('@message' => $message)));
+}
+
+/**
+ * Submit handler for simple_queue Add an action button to fill with the latest 
+ *  published nodes of the allowed content types for the queue.
+ * 
+ * 
+ * If the queue supports 10 items, and we have 5 items, this action will fill
+ *  the queue with 5 more nodes, these last five will be firsts
+ *  (or last depending on direction).
+ * 
+ * Avoid node repetitions.
+ * 
+ * @param 
+ *   array $form Allow access to the form.
+ * 
+ * @param 
+ *   array $form_state Allow access to the form.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_arrange_queue_form_fill_submit($form, &$form_state) {
+  $queue  = json_decode(json_encode($form['nodes']['#queue']), FALSE);
+  $message = 'The queue has been fill successfuly.';
+  $type = 'status';
+
+  if ($queue->size == 0 || $queue->size > count($queue->nodes)) {
+    simple_queue_fill($queue);
+  } 
+  else {
+    $message = 'The queue is full.';
+    $type = 'warning';
+  }
+  drupal_set_message(t('@message', array('@message' => $message)), $type);
 }
 
 /**

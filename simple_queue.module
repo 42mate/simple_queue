@@ -633,6 +633,9 @@ function simple_queue_api_autocomplete($queue, $string) {
  *
  * @return stdClass
  *  The Queue object with nodes or False is can't be found.
+ * 
+ * @author  
+ *   Casiva Agustin agustin@42mate.com.
  */
 function simple_queue_load($queue) {
   if (is_numeric($queue)) {
@@ -688,6 +691,60 @@ function simple_queue_load($queue) {
   }
 
   return $queue;
+}
+
+/**
+ * Add an action button to fill with the latest 
+ *  published nodes of the allowed content types for the queue.
+ * 
+ * @param 
+ *   object $queue a queue.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_fill($queue) {  
+  $qids_enable = array();
+  
+  $res = db_query("SELECT nid FROM {node} WHERE nid NOT IN"
+      . " (SELECT nid FROM {simple_queue_nodes} WHERE qid =:qid)",
+      array(':qid' => $queue->qid))->fetchAll();
+  
+  foreach ($res as $key => $value) {
+    $qids_enable[$key] = $value->nid;
+  }
+  
+  $query = db_select('node', 'n')
+    ->addTag('node_access')
+    ->fields('n', array('nid', 'tnid', 'title'))
+    ->range(0, 30);
+
+  if (!empty($queue->types)) {
+    $query->condition('n.type', simple_queue_get_attribute_from_objects($queue->types, 'type'), 'IN')->condition('n.status', 1);
+  }
+  
+  $query->orderBy('n.changed', 'DESC');
+
+  $result = $query->execute();
+  
+  if ($queue->size) {
+    $i = 0;
+    $limit =  $queue->size - count($queue->nodes);
+
+    foreach ($result as $node) {    
+      if (in_array($node->nid, $qids_enable) && $i < $limit) {
+        simple_queue_queue_add($queue, $node->nid);
+        $i++;
+      }          
+    } 
+  } 
+  else {    
+    foreach ($result as $node) {    
+      if (in_array($node->nid, $qids_enable)) {
+        simple_queue_queue_add($queue, $node->nid);
+      }    
+    } 
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -1252,6 +1309,26 @@ function get_default_display_from_types($types, $type) {
   }
       
   return '';
+}
+
+/**
+ * Get nids from nodes.
+ * 
+ * @param 
+ *   array $nodes
+ * 
+ * @return 
+ *   array nids.
+ * 
+ * @author
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function get_nids_from_queue($nodes) {
+  $nids = array();
+  foreach ($nodes as $key => $value) {
+    $nids[$key] = $value->nid;
+  }
+  return $nids;
 }
 
 /* --- THEME ---------------------------------------------------------------- */
