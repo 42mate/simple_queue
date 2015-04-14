@@ -61,7 +61,7 @@ Drupal.simple_queue = function(base, settings) {
 
   var saveOrder = function(order) {
     var new_order = '';
-    for (i in order) {
+    for (var i in order) {
       if (new_order) {
         new_order += ',';
       }
@@ -132,7 +132,7 @@ Drupal.simple_queue = function(base, settings) {
     restripeTable('#' + base);
   };
 
-  this.changeOrder = changeOrder;
+  this.changeOrder = changeOrder();
 
   var restripeTable = function(table) {
     // :even and :odd are reversed because jquery counts from 0 and
@@ -155,13 +155,13 @@ Drupal.simple_queue = function(base, settings) {
     }
   };
 
-  this.restripeTable = restripeTable;
+  this.restripeTable = restripeTable();
 
   // Set as a function so we can be both a closure and called later
   // when more items get added.
   var bindButtons = function() {
     if (settings.remove) {
-      $(settings.remove + ':not(.simple_equeue-processed)')
+      $(settings.remove + ':not(.simple_queue-processed)')
         .addClass('simple_queue-processed')
         .click(function() { return false; })
         .click(function(e) {
@@ -180,7 +180,7 @@ Drupal.simple_queue = function(base, settings) {
         .addClass('simple_queue-processed')
         .click(function() { return false; })
         .click(function(e) {
-          $(settings.row_class).each(function() { $(this).remove() });
+          $(settings.row_class).each(function() { $(this).remove(); });
           saveOrder([]);
         });
     }
@@ -295,7 +295,7 @@ Drupal.simple_queue = function(base, settings) {
           $(input).attr('disabled', true);
           $(input).parent().addClass('throbbing');
           var data = { position: maxPosition + 1 };
-          for (i in settings.post) {
+          for (var i in settings.post) {
             data[$(settings.post[i]).attr('name')] = $(settings.post[i]).val();
           }
 

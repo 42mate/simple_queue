@@ -18,12 +18,12 @@ jQuery.noConflict();
 
 Drupal.behaviors.simple_queueDrag = {
   attach: function(context) {
-    $('.simple_queue-dragdrop').each(function() {
+    $('.simple_queue-dragdrop').each(function() {        
       var table_id = $(this).attr('id');
       var tableDrag = Drupal.tableDrag[table_id];
       
       tableDrag.onDrop = function() {
-        $('#' + table_id + ' td.position').each(function(i) {
+        $('#' + table_id + ' td.position').each(function(i) { 
           $(this).html(i + 1);
         });
 
@@ -53,7 +53,7 @@ Drupal.behaviors.simple_queueReverse = {
   }
 };
 
-Drupal.behaviors.simple_queueShuffle = {
+Drupal.behaviors.simple_queueShuffle = {    
   attach: function(context) {
     $('#edit-actions-shuffle').click(function() {
       var $table = $(this).parent().parent().find('.simple_queue-dragdrop:first');

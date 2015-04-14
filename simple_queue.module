@@ -1368,7 +1368,7 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
       . '/simple_queue_dragdrop.js');
   
   $reverse[str_replace('-', '_', $table_id)] = FALSE;
-
+  
   drupal_add_js(
     array(
       'simple_queue' => array(
@@ -1384,25 +1384,24 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
   // Render form as table rows.
   $rows = array();
   $counter = 1;
-  foreach (element_children($form) as $key) {
+  foreach (element_children($form) as $key) {    
     if (isset($form[$key]['title'])) {
       $row = array();
 
-      $row[] = drupal_render($form[$key]['position']);
       $row[] = array(
         'data' => $counter,
         'class' => array('position')
       );
-      
       $row[] = drupal_render($form[$key]['title']);
       $row[] = drupal_render($form[$key]['status']);        
       $row[] = drupal_render($form[$key]['date']);      
       $row[] = drupal_render($form[$key]['type']);      
       $row[] = drupal_render($form[$key]['locked']);
+      $row[] = drupal_render($form[$key]['position']);
       $row[] = (!empty($form[$key]['edit'])) ? drupal_render($form[$key]['edit'])
           : '&nbsp;';
       $row[] = drupal_render($form[$key]['remove']);   
-
+      
       $rows[] = array(
         'data'  => $row,
         'class' => array('draggable'),
@@ -1411,17 +1410,19 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
 
     $counter++;
   }
+  
   if (empty($rows)) {
-    $rows[] = array(array('data' => t('No nodes in this queue.'), 'colspan' => 7));
+    $rows[] = array(array('data' => t('No nodes in this queue.'), 'colspan' => 9));
   }
 
-  // Render the main simple_queue table.
-  $header = array(t('Position'), t('Position'), t('Title'), t('Status'),
-    t('Create date'), t('Type'), t('Locked'), array('data' 
+  // Render the main simple_queue table.  
+  $header = array(t('Position'), t('Title'), t('Status'),
+    t('Create date'), t('Type'), t('Locked'), t('Position'), array('data' 
       => t('Actions'), 'colspan' => 2));
+  
   $output .= theme('table', array('header' => $header, 'rows' => $rows,
     'attributes' => array('id' => $table_id, 'class' => $table_classes)));
-
+  
   return $output;
 }
 
