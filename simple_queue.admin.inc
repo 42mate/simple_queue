@@ -100,7 +100,7 @@ function simple_queue_queues_list() {
         . '/view');
     
     $simple_queue_title = check_plain($queue->title);
-    
+
     if (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES)
         || (simple_queue_validate_permission(
             SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES) 
@@ -335,20 +335,21 @@ function simple_queue_edit_queue_form_submit($form_id, &$form_state) {
 
   $qid = simple_queue_save($queue); // sets $queue->qid if needed. 
   
-  if (!isset($queue->new)) {
-    $queue->count = db_query("SELECT COUNT(nid) FROM {simple_queue_nodes}"
+  if (!isset($queue->new)) {    
+    if ($queue->size) {
+      // only necessary if the queue is of finite length
+      $queue->count = db_query("SELECT COUNT(nid) FROM {simple_queue_nodes}"
         . " WHERE qid = :qid", array(':qid' => $queue->qid))->fetchField();
-    simple_queue_check_queue_size($queue);
-  }  
-
-  if (!empty($queue->new)) {
+      simple_queue_check_queue_size($queue);
+    }    
+    
+    drupal_set_message(t('The queue has been updated.'));
+  } 
+  else {
     $form_state['values']['qid'] = $qid;
     drupal_set_message(t('The queue has been created.'));
-  }
-  else {
-    drupal_set_message(t('The queue has been updated.'));
-  }
- 
+  }  
+
   $form_state['redirect'] = 'admin/structure/simple_queue';
 }
 
@@ -543,9 +544,7 @@ function simple_queue_arrange_queue($queue) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function _simple_queue_dragdrop_get_nodes($queue) {
-  // $order = $queue->reverse ? 'DESC' : 'ASC';
-
+function _simple_queue_dragdrop_get_nodes($queue) {  
   $visible = simple_queue_nids_visible($queue->qid);
 
   // Get a list of all nodes in the queue, regardless of access restrictions.
@@ -555,10 +554,10 @@ function _simple_queue_dragdrop_get_nodes($queue) {
   $query->leftJoin('simple_queue_nodes', 'nq', 'nq.nid = n.nid');
   $query->fields('n', array('nid'))
     ->fields('nq')
-    ->condition('nq.qid', $queue->qid);
-    // ->orderBy('nq.position', $order);
+    ->condition('nq.qid', $queue->qid)
+    ->orderBy('nq.position', 'ASC');
   $result = $query->execute();
- 
+  
   $nids = array();
   $sq_nodes = array();
   foreach ($result as $sq_node) {
@@ -568,7 +567,7 @@ function _simple_queue_dragdrop_get_nodes($queue) {
     $sq_nodes[$sq_node->nid]['locked'] = $sq_node->locked;
   }
   $nodes = node_load_multiple($nids);
-
+  
   foreach ($nodes as $node) {
     $node->visible = isset($visible[$node->nid]) ? TRUE : FALSE;
     $node->position = $sq_nodes[$node->nid]['position'];
@@ -780,10 +779,8 @@ function simple_queue_arrange_queue_form_submit($form, &$form_state) {
     }
   }
 
-  $message = 'The queue has been updated.';
-
   $qid  = $form['nodes']['#queue']['qid'];
-  simple_queue_save_queue_order($nodes, $qid);
+  $message = simple_queue_save_queue_order($nodes, $qid);
 
   drupal_set_message(t('@message', array('@message' => $message)));
 }
@@ -874,11 +871,11 @@ function simple_queue_save_queue_order($nodes, $qid) {
   $clean = array();
   $count = 1;
   ksort($nodes);
-  drupal_alter('simple_queue_sort', $nodes);
+  
+  //drupal_alter('simple_queue_sort', $nodes);
   foreach ($nodes as $pos => $node) {
     if (!is_numeric($node['nid']) || $node['nid'] < 1) {
-      return array(SIMPLE_QUEUE_INVALID_NID,
-        'Invalid nid value. New queue order not saved.');
+      return 'Invalid nid value. New queue order not saved.';
     }
     if (is_numeric($pos)) {
       $clean[$count] = $node;
@@ -889,8 +886,7 @@ function simple_queue_save_queue_order($nodes, $qid) {
       simple_queue_queue_remove_node($qid, $node['nid']);
     }
     else {
-      return array(SIMPLE_QUEUE_INVALID_POSITION,
-        'Invalid position value. New queue order not saved.');
+      return 'Invalid position value. New queue order not saved.';
     }
   }
   $nodes = $clean;
@@ -898,14 +894,7 @@ function simple_queue_save_queue_order($nodes, $qid) {
   array_walk($clean, create_function('&$node', '$node = serialize($node);'));
 
   if (count(array_unique($clean)) < count($nodes)) {
-    return array(SIMPLE_QUEUE_DUPLICATE_POSITION,
-      'Duplicate position values are not allowed. New queue order not saved.');
-  }
-  // Allow other modules to alter the order of nodes.
-  foreach (module_implements('simple_queue_save_queue_order_alter')
-      as $module) {
-    $function = $module . '_simple_queue_save_queue_order_alter';
-    $function($qid, $nodes);
+    return 'Duplicate position values are not allowed. New queue order not saved.';
   }
 
   // clear the queue and save the new positions
@@ -916,6 +905,7 @@ function simple_queue_save_queue_order($nodes, $qid) {
     if ($pos != 'r') {
       simple_queue_node_custom_update($node['nid'],
           'status', $node['data']['status']);
+      
       db_insert('simple_queue_nodes')
         ->fields(array(
           'qid' => $qid,
@@ -927,7 +917,7 @@ function simple_queue_save_queue_order($nodes, $qid) {
         ))
         ->execute();
     }
-  }
+  }  
 
   if ($queue->size) {
     // only necessary if the queue is of finite length    
@@ -935,7 +925,7 @@ function simple_queue_save_queue_order($nodes, $qid) {
     simple_queue_check_queue_size($queue);
   }
 
-  return array(SIMPLE_QUEUE_OK, 'The queue has been updated.');
+  return 'The queue has been updated.';
 }
 
 /**
@@ -984,7 +974,7 @@ function simple_queue_arrange_queue_form_add_submit($form, &$form_state) {
       form_set_error('', t('Please enter a valid node title.'));
     }
   }
-
+  
   simple_queue_queue_add($queue, $nid);
 }
 
