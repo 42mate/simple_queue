@@ -132,7 +132,7 @@ function simple_queue_menu() {
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_LOCAL_ACTION,
   );
-  //TODO new implementation
+
   $items['node/%node/simple_queue'] = array(
     'title' => '@tab',
     'title arguments' => array('@tab' => variable_get('simple_queue_tab_name',
@@ -389,7 +389,6 @@ function simple_queue_get_all_qids($page_size = 0, $pager_element = 0,
   return $cache[$page_size];
 }
 
-//TODO new implementation
 /**
  * Fetch a list of available queues for a given location. These queues
  * will be fully loaded and ready to go.
@@ -401,7 +400,6 @@ function simple_queue_load_queues_by_type($type, $account = NULL,
   return simple_queue_load_queues(array_keys($qids), $bypass_cache);
 }
 
-//TODO new implementation
 /**
  * Get an array of qids applicable to this node type.
  *

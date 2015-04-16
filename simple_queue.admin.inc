@@ -263,7 +263,6 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
       $form[] = array(
         '#type' => 'submit',
         '#value' => t('Delete'),
-        '#validate' => array('simple_queue_edit_queue_form_delete_validate'),
         '#submit' => array('simple_queue_edit_queue_form_delete_submit'),
       );
     }
@@ -355,23 +354,6 @@ function simple_queue_edit_queue_form_submit($form_id, &$form_state) {
   }  
 
   $form_state['redirect'] = 'admin/structure/simple_queue';
-}
-
-/**
- * Delete-validate function for the simple_queue_queue form.
- * 
- * @param 
- *   array $form Allow access to the form.
- * 
- * @param 
- *   array $form_state Allow access to the form.
- * 
- * @author  
- * Daniel Anzawa daniel@42mate.com.
- */
-function simple_queue_edit_queue_form_delete_validate($form, &$form_state) {
-  // TODO No validation for delete step!  But we need to have this so
-  //  the default validation isn't called.
 }
 
 /**
@@ -814,7 +796,6 @@ function simple_queue_admin_add_node($queue, $node) {
   drupal_goto();
 }
 
-// TODO new implementation
 /**
  * Display the queue controls for a node.
  *
