@@ -15,11 +15,15 @@ define('SIMPLE_QUEUE_PERMISSION_ADD_QUEUES', 'add queues');
 define('SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES', 'delete queues');
 define('SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES', 'edit queues');
 define('SIMPLE_QUEUE_PERMISSION_VIEW_ROLES_QUEUES', 'view roles queues');
-define('SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES', 'edit same roles queues');
-define('SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES', 'delete same roles queues');
-define('SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES', 'view same roles queues');
+define('SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES',
+    'edit same roles queues');
+define('SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES',
+    'delete same roles queues');
+define('SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES',
+    'view same roles queues');
 define('SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES', 'add nodes queues');
-define('SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES', 'add nodes same roles queues');
+define('SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES',
+    'add nodes same roles queues');
 define('SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES', 'locked unlocked nodes');
 define('SIMPLE_QUEUE_PERMISSION_LIST_QUEUES', 'list queue');
 
@@ -115,7 +119,7 @@ function simple_queue_menu() {
     'page callback' => 'simple_queue_autocomplete',
     'access callback' => TRUE,
     'file' => 'simple_queue.admin.inc',
-    'type' => MENU_CALLBACK
+    'type' => MENU_CALLBACK,
   );
   
   $items['admin/structure/simple_queue/add'] = array(
@@ -127,6 +131,19 @@ function simple_queue_menu() {
     'access arguments' => array(SIMPLE_QUEUE_PERMISSION_ADD_QUEUES),
     'file' => 'simple_queue.admin.inc',
     'type' => MENU_LOCAL_ACTION,
+  );
+  //TODO new implementation
+  $items['node/%node/simple_queue'] = array(
+    'title' => '@tab',
+    'title arguments' => array('@tab' => variable_get('simple_queue_tab_name',
+        'simple_queue')),
+    'page callback' => 'simple_queue_node_tab',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'access arguments' => array(1),
+    'file' => 'simple_queue.admin.inc',
+    'weight' => 5,
+    'type' => MENU_LOCAL_TASK,
   );
   // Actual administrative items.
   $items['admin/structure/simple_queue/%simple_queue/edit'] = array(
@@ -157,7 +174,7 @@ function simple_queue_menu() {
     'page arguments' => array(3),
     'access callback' => TRUE,
     'file' => 'simple_queue.admin.inc',
-    'type' => MENU_CALLBACK
+    'type' => MENU_CALLBACK,
   );
   
   $items['admin/structure/simple_queue/%simple_queue/view'] = array(
@@ -167,15 +184,24 @@ function simple_queue_menu() {
     'access callback' => TRUE,
     'file' => 'simple_queue.admin.inc',
     'weight' => -10,
-    'type' => MENU_DEFAULT_LOCAL_TASK
+    'type' => MENU_DEFAULT_LOCAL_TASK,
   );
   
-  $items['admin/structure/simple_queue/%simple_queue/remove-node/%node'] = array(
+  $items['admin/structure/simple_queue/%simple_queue/add-node/%node'] = array(
+    'page callback' => 'simple_queue_admin_add_node',
+    'page arguments' => array(3, 5),
+    'access callback' => TRUE,
+    'file' => 'simple_queue.admin.inc',
+    'type' => MENU_CALLBACK,
+  );
+  
+  $items['admin/structure/simple_queue/%simple_queue/remove-node/%node']
+      = array(
     'page callback' => 'simple_queue_admin_remove_node',
     'page arguments' => array(3, 5),
     'access callback' => TRUE,
     'file' => 'simple_queue.admin.inc',
-    'type' => MENU_CALLBACK
+    'type' => MENU_CALLBACK,
   );
   
   return $items;
@@ -306,6 +332,126 @@ class simple_queue_queue {
 }
 
 /**
+ * Get an array of qids using the pager query. This administrative list
+ * does no permission checking, so should only be available to users who
+ * have passed the 'administer queues' check.
+ *
+ * @param $page_size
+ *   The page size to use. If this is 0 or NULL, all queues will be returned.
+ *   Defaults to 0.
+ * 
+ * @param $pager_element
+ *   In the rare event this should use another pager element, set this.
+ * 
+ * @param $bypass_cache
+ *   Boolean value indicating whether to bypass the cache or not.
+ *
+ * @return $qids
+ *   An array in the format: @code { array($qid => $qid) }
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_get_all_qids($page_size = 0, $pager_element = 0,
+    $bypass_cache = FALSE) {
+  $cache = &drupal_static(__FUNCTION__, array());
+  if ($bypass_cache || empty($cache[$page_size])) {    
+
+    // TODO First must validate if the user has the queue list permission. 
+    // If the user has this permission then the view queues same permission
+    //  is canceled.
+    if (!simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES) 
+        &&  simple_queue_validate_permission(
+            SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES)) {
+      global $user;
+      
+      // SELECT r.qid FROM simple_queue_roles r WHERE IN (:rids)
+      $query = db_select('simple_queue_roles', 'r')
+        ->fields('r', array('qid'))
+        ->condition('r.rid', array_keys($user->roles), 'IN');
+    } 
+    else {
+      $query = db_select('simple_queue_queue', 'q')
+        ->fields('q', array('qid'));
+    }
+
+    if (!empty($page_size)) {
+      $query->extend('PagerDefault')
+        ->extend('TableSort')
+        ->limit($page_size)
+        ->element($pager_element);
+    }
+
+    $qids = $query->execute()->fetchAllKeyed(0, 0);
+
+    $cache[$page_size] = $qids;
+  }
+  return $cache[$page_size];
+}
+
+//TODO new implementation
+/**
+ * Fetch a list of available queues for a given location. These queues
+ * will be fully loaded and ready to go.
+ */
+function simple_queue_load_queues_by_type($type, $account = NULL,
+    $bypass_cache = FALSE) {
+  $qids = simple_queue_get_qids($type, $account, $bypass_cache);
+
+  return simple_queue_load_queues(array_keys($qids), $bypass_cache);
+}
+
+//TODO new implementation
+/**
+ * Get an array of qids applicable to this node type.
+ *
+ * @param $type
+ *   The node type.
+ * 
+ * @param $account
+ *   The account to test against. Defaults to the currently logged in user.
+ *
+ * @return $qids
+ *   An array in the format: @code { array($qid 
+ *   => array('qid' => $qid, 'show_in_tab' '
+ *   => true/false, 'show_in_links' => true/false }
+ *
+ * @param $bypass_cache
+ *  Boolean value indicating whether to bypass the cache or not.
+ */
+function simple_queue_get_qids($type, $account = NULL, $bypass_cache = FALSE) {
+  if (!isset($account)) {
+    global $user;
+    $account = $user;
+  }
+
+  static $cache = array();
+  if ($bypass_cache || !isset($cache[$type])) {
+    $roles_join = $roles_where = '';
+    $roles = array();
+    
+    $roles_join = "INNER JOIN {simple_queue_roles} nr ON nr.qid = nq.qid ";
+    $roles = array_keys((array) $account->roles)
+        + array(DRUPAL_AUTHENTICATED_RID);
+
+    $roles_where .= "AND nr.rid IN (:roles)";
+
+    $sql = 'SELECT nq.qid ' .
+      'FROM {simple_queue_queue} nq ' .
+      'INNER JOIN {simple_queue_types} nt ON nt.qid = nq.qid ' . $roles_join .
+      "WHERE nt.type = :type " . $roles_where;
+    $result = db_query($sql, array(':type' => $type, ':roles' => $roles));
+
+    $qids = array();
+    foreach ($result as $qid) {
+      $qids[$qid->qid] = $qid;
+    }
+    $cache[$type] = $qids;
+  }
+  return $cache[$type];
+}
+
+/**
  * Load an array of $qids.
  *
  * This exists to provide a way of loading a bunch of queues with
@@ -352,7 +498,8 @@ function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
       $loaded[$obj->qid]->roles[] = $obj->rid;
     }
 
-    $result = db_query("SELECT qid, type, default_display FROM {simple_queue_types} WHERE qid"
+    $result = db_query("SELECT qid, type, default_display"
+        . " FROM {simple_queue_types} WHERE qid"
         . " IN (:to_load)", array(':to_load' => $to_load));
     foreach ($result as $obj) {
       $loaded[$obj->qid]->types[] = $obj;
@@ -515,15 +662,6 @@ function simple_queue_queue_add($queue, $nid) {
       // 0 means infinity so never do this if FALSE.
       simple_queue_check_queue_size($queue, $queue->size);
     }
-    /*if (module_exists('apachesolr')) {
-      // TODO Apachesolr has changed this function from
-      // apachesolr_mark_node($nid) to
-      // apachesolr_mark_entity('node', $nid);
-      // reference: https://www.drupal.org/node/1425326
-      apachesolr_mark_node($nid);
-    }*/
-    // Invoke the hook to notify other modules of the node addition.
-    //module_invoke_all('simple_queue_add', $queue, $nid);
   }
 }
 
@@ -580,7 +718,9 @@ function simple_queue_api_autocomplete($queue, $string) {
     ->range(0, variable_get('simple_queue_autocomplete_limit', 10));
 
   if (!empty($queue->types)) {
-    $query->condition('n.type', simple_queue_get_attribute_from_objects($queue->types, 'type'), 'IN')->condition('n.status', 1);
+    $query->condition('n.type',
+        simple_queue_get_attribute_from_objects($queue->types,
+            'type'), 'IN')->condition('n.status', 1);
   }
 
   global $user;
@@ -599,7 +739,8 @@ function simple_queue_api_autocomplete($queue, $string) {
   $query->orderBy('n.changed', 'DESC');
 
   if ($match) {
-    // If it found a nid via specification, reduce our resultset to just that nid.
+    // If it found a nid via specification,
+    //  reduce our resultset to just that nid.
     $query->condition('n.nid', $preg_matches[1]);
   }
   else {
@@ -714,7 +855,9 @@ function simple_queue_fill($queue) {
     ->range(0, 30);
 
   if (!empty($queue->types)) {
-    $query->condition('n.type', simple_queue_get_attribute_from_objects($queue->types, 'type'), 'IN')->condition('n.status', 1);
+    $query->condition('n.type',
+        simple_queue_get_attribute_from_objects($queue->types, 'type'),
+        'IN')->condition('n.status', 1);
   }
   
   $query->orderBy('n.changed', 'DESC');
@@ -899,7 +1042,8 @@ function simple_queue_queue_size_text($max, $count, $long = TRUE) {
   }
   else {
     if ($long) {
-      $message = theme('simple_queue_queue_count_text', array('count' => $count));
+      $message = theme('simple_queue_queue_count_text', array('count'
+        => $count));
     }
     else {
       $message = $count;
@@ -1057,13 +1201,15 @@ function simple_queue_validate_queue_same_roles($rids) {
  */
 function simple_queue_machine_name_exists($machine_name) {
   $queue_exists = db_query_range('SELECT 1 FROM {simple_queue_queue}'
-      . ' WHERE name = :name', 0, 1, array(':name' => $machine_name))->fetchField();
+      . ' WHERE name = :name', 0, 1, array(':name'
+        => $machine_name))->fetchField();
 
   return $queue_exists;
 }
 
 /**
- * Get the list of nodes in the queue, taking into account node access restrictions.
+ * Get the list of nodes in the queue,
+ *  taking into account node access restrictions.
  * 
  * @param 
  *   string $qid id of the queue.
@@ -1325,6 +1471,38 @@ function get_nids_from_queue($nodes) {
   return $nids;
 }
 
+/**
+ * Verify if the node exist on the queue. 
+ * In case that exist return true another case return false.
+ * 
+ * @param 
+ *   stdClass $queue a queue.
+ * 
+ * @param 
+ *   stdClass $node_param node.
+ * 
+ * @return 
+ *   boolean exist or not the node in the queue.
+ * 
+ * @author
+ *   Daniel Anzawa daniel@42mate.com.
+ * 
+ */
+function verify_node_exist_queue($queue, $node_param) {    
+  if (!property_exists($queue, 'nodes')) {
+    return FALSE;
+  }
+      
+  $nodes = $queue->nodes;  
+
+  foreach ($nodes as $node) {
+    if ($node['nid'] === $node_param->nid) {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
 /* --- THEME ---------------------------------------------------------------- */
 
 /**
@@ -1390,7 +1568,8 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
       $row[] = drupal_render($form[$key]['type']);      
       $row[] = drupal_render($form[$key]['locked']);
       $row[] = drupal_render($form[$key]['position']);
-      $row[] = (!empty($form[$key]['edit'])) ? drupal_render($form[$key]['edit'])
+      $row[] = (!empty($form[$key]['edit']))
+          ? drupal_render($form[$key]['edit'])
           : '&nbsp;';
       $row[] = drupal_render($form[$key]['remove']);   
       $row[] = array(
@@ -1408,7 +1587,8 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
   }
   
   if (empty($rows)) {
-    $rows[] = array(array('data' => t('No nodes in this queue.'), 'colspan' => 9));
+    $rows[] = array(array('data' => t('No nodes in this queue.'),
+      'colspan' => 9));
   }
 
   // Render the main simple_queue table.  

@@ -231,9 +231,12 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
     '#type' => 'checkboxes',
     '#title' => t('Types'),
     '#required' => TRUE, 
-    '#default_value' => empty($queue->types) ? array() : simple_queue_get_attribute_from_objects($queue->types, 'type'),
-    '#options' => $node_type_names, // Returns a list of available node type names.
-    '#description' => t('Check each node type that can be added to this queue.'),
+    '#default_value' => empty($queue->types) ? array()
+    : simple_queue_get_attribute_from_objects($queue->types, 'type'),
+    '#options'
+    => $node_type_names, // Returns a list of available node type names.
+    '#description'
+    => t('Check each node type that can be added to this queue.'),
   );
   
   foreach ($node_type_names as $key => $value) {
@@ -241,7 +244,8 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
       '#title' => check_plain(t('Select view mode to default for ' . $value)),
       '#type' => 'select',
       '#options' => simple_queue_get_view_modes_formatted($key),
-      '#default_value' => empty($queue->types) ? array() : get_default_display_from_types($queue->types, $key),
+      '#default_value' => empty($queue->types) ? array()
+      : get_default_display_from_types($queue->types, $key),
       '#states' => array(      
         'visible' => array(
           ':input[name="types[' . $key . ']"]' => array('checked' => TRUE),
@@ -429,64 +433,6 @@ function simple_queue_admin_delete_submit($form_id, &$form_state) {
     drupal_set_message(t('The queue has been deleted.'));
   }
   $form_state['redirect'] = 'admin/structure/simple_queue';
-}
-
-/**
- * Get an array of qids using the pager query. This administrative list
- * does no permission checking, so should only be available to users who
- * have passed the 'administer queues' check.
- *
- * @param $page_size
- *   The page size to use. If this is 0 or NULL, all queues will be returned.
- *   Defaults to 0.
- * 
- * @param $pager_element
- *   In the rare event this should use another pager element, set this.
- * 
- * @param $bypass_cache
- *   Boolean value indicating whether to bypass the cache or not.
- *
- * @return $qids
- *   An array in the format: @code { array($qid => $qid) }
- * 
- * @author  
- *   Daniel Anzawa daniel@42mate.com.
- */
-function simple_queue_get_all_qids($page_size = 0, $pager_element = 0,
-    $bypass_cache = FALSE) {
-  $cache = &drupal_static(__FUNCTION__, array());
-  if ($bypass_cache || empty($cache[$page_size])) {    
-
-    // TODO First must validate if the user has the queue list permission. 
-    // If the user has this permission then the view queues same permission
-    //  is canceled.
-    if (!simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES) 
-        &&  simple_queue_validate_permission(
-            SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES)) {
-      global $user;
-      
-      // SELECT r.qid FROM simple_queue_roles r WHERE IN (:rids)
-      $query = db_select('simple_queue_roles', 'r')
-        ->fields('r', array('qid'))
-        ->condition('r.rid', array_keys($user->roles), 'IN');
-    } 
-    else {
-      $query = db_select('simple_queue_queue', 'q')
-        ->fields('q', array('qid'));
-    }
-
-    if (!empty($page_size)) {
-      $query->extend('PagerDefault')
-        ->extend('TableSort')
-        ->limit($page_size)
-        ->element($pager_element);
-    }
-
-    $qids = $query->execute()->fetchAllKeyed(0, 0);
-
-    $cache[$page_size] = $qids;
-  }
-  return $cache[$page_size];
 }
 
 /**
@@ -835,7 +781,7 @@ function simple_queue_arrange_queue_form_fill_submit($form, &$form_state) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_admin_remove_node($queue, $node) {
+function simple_queue_admin_remove_node($queue, $node) {  
   if (!simple_queue_check_token($node->nid)) {
     return drupal_goto();
   }
@@ -844,6 +790,147 @@ function simple_queue_admin_remove_node($queue, $node) {
 
   // There should always be a destination set for this, so just goto wherever.
   drupal_goto();
+}
+
+/**
+ * Page callback to add a node to a queue.
+ * 
+ *  @param 
+ *   array $queue a queue.
+ * 
+ * @param 
+ *   array $node a node.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_admin_add_node($queue, $node) {  
+  if (!simple_queue_check_token($node->nid)) {
+    return drupal_goto();
+  }
+  simple_queue_queue_add($queue, $node->nid);
+
+  // There should always be a destination set for this, so just goto wherever.
+  drupal_goto();
+}
+
+// TODO new implementation
+/**
+ * Display the queue controls for a node.
+ *
+ * @param 
+ *   $node The loaded $node; will be loaded by the hook_menu.
+ * 
+ * @return
+ *  array.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_node_tab($node) {
+  $output = '';
+
+  $queues = simple_queue_load_queues_by_type($node->type);
+
+  if (!$queues) {
+    return FALSE;
+  }
+  $header = array();
+  $header[] = array('data' => t('Queue'), 'field' => 'title', 'sort'
+    => 'asc', 'class' => array('simple_queue-title'));
+  $header[] = array('data' => t('Max nodes'), 'field' => 'size', 'class'
+    => array('simple_queue-max-nodes'));
+  $header[] = array('data' => t('In queue'), 'field' => 'count', 'class'
+    => array('simple_queue-in-queue'));
+  $header[] = array('data' => t('Operation'), 'class'
+    => array('simple_queue-operation'));
+  $table_sort = tablesort_init($header);
+
+  $sort_primary = array();
+  $sort_secondary = array();
+  $sort_direction_regular = array('asc' => SORT_ASC, 'desc' => SORT_DESC);
+  $sort_direction_reverse = array('asc' => SORT_DESC, 'desc' => SORT_ASC);
+  
+  foreach ($queues as $queue) {
+    $sort_secondary[] = $queue->title;
+    switch ($table_sort['sql']) {
+      case 'title':
+      default:
+        $sort_primary[] = $queue->title;
+        $sort_direction = $sort_direction_regular;
+        break;
+      case 'size':
+        $sort_primary[] = $queue->size;
+        $sort_direction = $sort_direction_reverse;
+        break;
+      case 'count':
+        $sort_primary[] = count($queue->nodes);
+        $sort_direction = $sort_direction_reverse;
+        break;
+    }
+  }
+
+  if (!empty($table_sort)) {
+    if (strtolower($table_sort['sort']) == 'desc') {
+      array_multisort($sort_primary, $sort_direction['desc'], $sort_secondary,
+          $queues); // Re-indexes array keys; key no longer equals qid.
+    }
+    else {
+      array_multisort($sort_primary, $sort_direction['asc'], $sort_secondary, 
+          $queues); // Re-indexes array keys; key no longer equals qid.
+    }
+  }
+
+  $rows = array();
+  foreach ($queues as $queue) {    
+    if (verify_node_exist_queue($queue, $node)) {    
+      $op = l(
+        t('Remove from queue'),
+        "admin/structure/simple_queue/$queue->qid/remove-node/$node->nid",
+        array('attributes' => array('class'
+          => array('simple_queue-ajax-toggle')),
+          'query' => simple_queue_get_query_string($node->nid, TRUE,
+              array('tab' => '1')),
+          'purl' => array('disabled' => TRUE))
+      );
+    }
+    else {      
+      $op = l(
+        t('Add to queue'),
+        "admin/structure/simple_queue/$queue->qid/add-node/$node->nid",
+        array('attributes' => array('class'
+          => array('simple_queue-ajax-toggle')),
+          'query' => simple_queue_get_query_string($node->nid, TRUE,
+              array('tab' => '1')),
+          'purl' => array('disabled' => TRUE))
+      );
+    }
+    $row = array();
+    $row[] = array(
+      'class' => array('simple_queue-title'),
+      'data' => l(simple_queue_title_substitute($queue->title, $queue),
+          "admin/structure/simple_queue/$queue->qid/view"),
+    );
+    $row[] = array(
+      'class' => array('simple_queue-max-nodes'),
+      'data' => $queue->size ? $queue->size : t('Infinite')
+    );
+    $count = property_exists($queue, 'nodes') ? count($queue->nodes) : 0;
+    $row[] = array(
+      'id' => 'simple_queue-count-' . $queue->qid,
+      'class' => array('simple_queue-in-queue'),
+      'data' => simple_queue_queue_size_text($queue->size, $count, FALSE)
+    );
+    $row[] = array('class' => array('simple_queue-operation'), 'data' => $op);
+    $rows[] = $row;
+  }
+
+  $output .= theme('table', array('header' => $header, 'rows' => $rows,
+    'attributes' => array('class' => array('simple_queue-table'))));
+  drupal_add_js(drupal_get_path('module', 'simple_queue') . '/simple_queue.js');
+  drupal_add_css(drupal_get_path('module',
+      'simple_queue') . '/simple_queue.css');
+  return $output;
 }
 
 /**
@@ -894,7 +981,8 @@ function simple_queue_save_queue_order($nodes, $qid) {
   array_walk($clean, create_function('&$node', '$node = serialize($node);'));
 
   if (count(array_unique($clean)) < count($nodes)) {
-    return 'Duplicate position values are not allowed. New queue order not saved.';
+    return 'Duplicate position values are not allowed.'
+    . ' New queue order not saved.';
   }
 
   // clear the queue and save the new positions
