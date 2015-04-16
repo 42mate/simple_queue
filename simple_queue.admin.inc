@@ -13,6 +13,9 @@
 /**
  * Display a list of queues and their status for the administrator.
  * 
+ * @return 
+ *   array.
+ * 
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */

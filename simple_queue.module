@@ -392,6 +392,18 @@ function simple_queue_get_all_qids($page_size = 0, $pager_element = 0,
 /**
  * Fetch a list of available queues for a given location. These queues
  * will be fully loaded and ready to go.
+ * 
+ * @param 
+ *   string $type content type.
+ * 
+ * @param
+ *   stdClass $account.
+ * 
+ * @return 
+ *   array queues.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_load_queues_by_type($type, $account = NULL,
     $bypass_cache = FALSE) {
@@ -409,13 +421,16 @@ function simple_queue_load_queues_by_type($type, $account = NULL,
  * @param $account
  *   The account to test against. Defaults to the currently logged in user.
  *
+ * @param $bypass_cache
+ *  Boolean value indicating whether to bypass the cache or not.
+ * 
  * @return $qids
  *   An array in the format: @code { array($qid 
  *   => array('qid' => $qid, 'show_in_tab' '
  *   => true/false, 'show_in_links' => true/false }
- *
- * @param $bypass_cache
- *  Boolean value indicating whether to bypass the cache or not.
+ * 
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_get_qids($type, $account = NULL, $bypass_cache = FALSE) {
   if (!isset($account)) {
@@ -1150,7 +1165,10 @@ function simple_queue_access($permission, $queue = NULL) {
  * @global
  *   object $user.
  *
- * @return bool boolean.@author
+ * @return 
+ *   bool boolean.
+ * 
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_validate_permission($permission) {
@@ -1174,7 +1192,10 @@ function simple_queue_validate_permission($permission) {
  * @global
  *   object $user.
  *
- * @return bool boolean.@author
+ * @return 
+ *   bool boolean.
+ * 
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_validate_queue_same_roles($rids) {
@@ -1687,7 +1708,6 @@ function simple_queue_retrieve_queue_by_id($qid) {
  * 
  * @author
  *   Casiva Agustin agustin@42mate.com.
- *
  */
 function simple_queue_retrieve_queue_by_name($queue_name) {
   $queue = db_select('simple_queue_queue', 'q')
