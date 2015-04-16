@@ -139,8 +139,8 @@ function simple_queue_menu() {
         'simple_queue')),
     'page callback' => 'simple_queue_node_tab',
     'page arguments' => array(1),
-    'access callback' => TRUE,
-    'access arguments' => array(1),
+    'access callback' => 'simple_queue_access',
+    'access arguments' => array('administer content types'),
     'file' => 'simple_queue.admin.inc',
     'weight' => 5,
     'type' => MENU_LOCAL_TASK,
@@ -1130,6 +1130,11 @@ function simple_queue_access($permission, $queue = NULL) {
       break;
     case SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES:
       $access = simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES);
+      break;
+    case 'administer content types':
+      $access = ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES) 
+        || simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES))) 
+        && user_access('administer content types');
       break;
   }
   

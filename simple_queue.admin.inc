@@ -787,13 +787,19 @@ function simple_queue_admin_remove_node($queue, $node) {
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_admin_add_node($queue, $node) {  
-  if (!simple_queue_check_token($node->nid)) {
+  if ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES)
+        || (simple_queue_validate_permission(
+            SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES)
+        && simple_queue_validate_queue_same_roles($queue->roles)))) {    
+    
+    if (!simple_queue_check_token($node->nid)) {
     return drupal_goto();
   }
   simple_queue_queue_add($queue, $node->nid);
 
   // There should always be a destination set for this, so just goto wherever.
   drupal_goto();
+  }  
 }
 
 /**
@@ -876,15 +882,24 @@ function simple_queue_node_tab($node) {
       );
     }
     else {      
-      $op = l(
-        t('Add to queue'),
-        "admin/structure/simple_queue/$queue->qid/add-node/$node->nid",
-        array('attributes' => array('class'
-          => array('simple_queue-ajax-toggle')),
-          'query' => simple_queue_get_query_string($node->nid, TRUE,
-              array('tab' => '1')),
-          'purl' => array('disabled' => TRUE))
-      );
+      if ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES)
+        || (simple_queue_validate_permission(
+            SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES)
+        && simple_queue_validate_queue_same_roles($queue->roles)))) {   
+        
+        $op = l(
+          t('Add to queue'),
+          "admin/structure/simple_queue/$queue->qid/add-node/$node->nid",
+          array('attributes' => array('class'
+            => array('simple_queue-ajax-toggle')),
+            'query' => simple_queue_get_query_string($node->nid, TRUE,
+                array('tab' => '1')),
+            'purl' => array('disabled' => TRUE))
+        );
+      } 
+      else {
+        $op = NULL;
+      }     
     }
     $row = array();
     $row[] = array(
