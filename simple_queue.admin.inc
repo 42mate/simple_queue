@@ -641,11 +641,18 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
     '#value' => t('Clear'),
     '#submit' => array('simple_queue_arrange_queue_form_clear_submit'),
   );
-  $form['actions']['fill'] = array(
-    '#type' => 'submit',
-    '#value' => t('Fill'),
-    '#submit' => array('simple_queue_arrange_queue_form_fill_submit'),
-  );
+   // Validate permission to add node to the queue.
+  if ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES)
+        || (simple_queue_validate_permission(
+            SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES)
+        && simple_queue_validate_queue_same_roles($queue->roles)))) { 
+    
+    $form['actions']['fill'] = array(
+      '#type' => 'submit',
+      '#value' => t('Fill'),
+      '#submit' => array('simple_queue_arrange_queue_form_fill_submit'),
+    );
+  }  
 
   // Disable all buttons if the queue is empty.
   if ($count == 0) {
@@ -796,12 +803,13 @@ function simple_queue_admin_add_node($queue, $node) {
         && simple_queue_validate_queue_same_roles($queue->roles)))) {    
     
     if (!simple_queue_check_token($node->nid)) {
-    return drupal_goto();
-  }
-  simple_queue_queue_add($queue, $node->nid);
+      return drupal_goto();
+    }
 
-  // There should always be a destination set for this, so just goto wherever.
-  drupal_goto();
+    simple_queue_queue_add($queue, $node->nid);
+
+    // There should always be a destination set for this, so just goto wherever.
+    drupal_goto();
   }  
 }
 
