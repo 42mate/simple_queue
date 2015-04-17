@@ -496,6 +496,7 @@ function _simple_queue_dragdrop_get_nodes($queue) {
     // Save node position in a separate array so we can reference it later.
     $sq_nodes[$sq_node->nid]['position'] = $sq_node->position;
     $sq_nodes[$sq_node->nid]['locked'] = $sq_node->locked;
+    $sq_nodes[$sq_node->nid]['display'] = $sq_node->display;
   }
   $nodes = node_load_multiple($nids);
   
@@ -503,6 +504,7 @@ function _simple_queue_dragdrop_get_nodes($queue) {
     $node->visible = isset($visible[$node->nid]) ? TRUE : FALSE;
     $node->position = $sq_nodes[$node->nid]['position'];
     $node->locked = $sq_nodes[$node->nid]['locked'];
+    $node->display = $sq_nodes[$node->nid]['display'];
   }
   
   return $nodes;
@@ -526,7 +528,7 @@ function _simple_queue_dragdrop_get_nodes($queue) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
+function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) { 
   $form = array('#tree' => TRUE);
   
   // Prepare the main part of the form which will be themed as a table.
@@ -535,8 +537,7 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
   $form['nodes']['#theme'] = 'simple_queue_arrange_queue_form_table';
 
   // Theme function needs these.
-  $form['nodes']['#queue']    = (array) $queue;
-
+  $form['nodes']['#queue']    = (array) $queue;  
   foreach ($nodes as $node) {
     $form['nodes'][$node->nid]['#node'] = (array) $node;
     if ($node->visible) {     
@@ -563,6 +564,11 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
       ) : array('#markup' => $node->locked);
       $form['nodes'][$node->nid]['date'] = array('#markup' => 
         format_date($node->created, 'short'));
+      $form['nodes'][$node->nid]['display'] = array(
+        '#type' => 'select',
+        '#options' => simple_queue_get_view_modes_formatted($node->type),
+        '#default_value' => $node->display,
+      );
     }
     else {
       $form['nodes'][$node->nid]['title'] = array('#value' =>
@@ -571,6 +577,7 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
       $form['nodes'][$node->nid]['type'] = array('#value' => '');
       $form['nodes'][$node->nid]['locked'] = array('#value' => '');
       $form['nodes'][$node->nid]['date'] = array('#value' => '');
+      $form['nodes'][$node->nid]['display'] = array('#value' => '');
     }
 
     if (node_access('update', $node)) {
@@ -806,7 +813,7 @@ function simple_queue_admin_add_node($queue, $node) {
       return drupal_goto();
     }
 
-    simple_queue_queue_add($queue, $node->nid);
+    simple_queue_add_node($queue, $node);
 
     // There should always be a destination set for this, so just goto wherever.
     drupal_goto();
@@ -1011,6 +1018,7 @@ function simple_queue_save_queue_order($nodes, $qid) {
           'timestamp' => $now,
           'display' => '',
           'locked' => $node['data']['locked'],
+          'display' => $node['data']['display'],
         ))
         ->execute();
     }
@@ -1072,7 +1080,9 @@ function simple_queue_arrange_queue_form_add_submit($form, &$form_state) {
     }
   }
   
-  simple_queue_queue_add($queue, $nid);
+  $node = node_load($nid); // ...where $nid is the node id
+  
+  simple_queue_add_node($queue, $node);
 }
 
 /**

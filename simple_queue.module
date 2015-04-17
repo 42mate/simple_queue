@@ -654,17 +654,19 @@ function simple_queue_delete($qid) {
  *   pop nodes out if the queue breaks size limits.
  * 
  * @param 
- *   string $nid The node ID.
+ *   stdClass $node a node.
  * 
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_queue_add($queue, $nid) {
-  if (!empty($nid)) {
-    db_query("INSERT INTO {simple_queue_nodes} (qid, nid, position, timestamp)"
-        . " VALUES (:qid, :nid, IFNULL((SELECT MAX(position)+1 FROM"
+function simple_queue_add_node($queue, $node) {
+  if (!empty($node->nid)) {    
+    $display = simple_queue_get_display_to_type($queue->types, $node->type);
+    
+    db_query("INSERT INTO {simple_queue_nodes} (qid, nid, display, position, timestamp)"
+        . " VALUES (:qid, :nid, :display, IFNULL((SELECT MAX(position)+1 FROM"
         . " (SELECT * from {simple_queue_nodes} WHERE qid = :qid) as nn), 1),"
-        . " :time)", array(':qid' => $queue->qid, ':nid' => $nid, ':time'
+        . " :time)", array(':qid' => $queue->qid, ':nid' => $node->nid, ':display' => $display, ':time'
           => REQUEST_TIME));
     $queue->count = db_query("SELECT COUNT(nid) FROM {simple_queue_nodes}"
         . " WHERE qid = :qid", array(':qid' => $queue->qid))->fetchField();
@@ -849,7 +851,7 @@ function simple_queue_fill($queue) {
   
   $query = db_select('node', 'n')
     ->addTag('node_access')
-    ->fields('n', array('nid', 'tnid', 'title'))
+    ->fields('n', array('nid', 'tnid', 'title', 'type'))
     ->range(0, 30);
 
   if (!empty($queue->types)) {
@@ -868,7 +870,7 @@ function simple_queue_fill($queue) {
 
     foreach ($result as $node) {    
       if (in_array($node->nid, $qids_enable) && $i < $limit) {
-        simple_queue_queue_add($queue, $node->nid);
+        simple_queue_add_node($queue, $node);
         $i++;
       }          
     } 
@@ -876,7 +878,7 @@ function simple_queue_fill($queue) {
   else {    
     foreach ($result as $node) {    
       if (in_array($node->nid, $qids_enable)) {
-        simple_queue_queue_add($queue, $node->nid);
+        simple_queue_add_node($queue, $node);
       }    
     } 
   }
@@ -1457,6 +1459,28 @@ function simple_queue_verify_node_exist_queue($queue, $node_param) {
   return FALSE;
 }
 
+/**
+ * Get display to a type from types array.
+ * 
+ * @param 
+ *   array $types an array of types.
+ * 
+ * @param 
+ *   string $type content type name.
+ * 
+ * @return 
+ *   string diplay type.
+ */
+function simple_queue_get_display_to_type($types, $type_arg) {
+  foreach ($types as $type) {
+    if ($type->type === $type_arg) {
+      return $type->default_display;
+    }
+  }
+  
+  return FALSE;
+}
+
 /* --- THEME ---------------------------------------------------------------- */
 
 /**
@@ -1521,6 +1545,7 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
       $row[] = drupal_render($form[$key]['date']);      
       $row[] = drupal_render($form[$key]['type']);      
       $row[] = drupal_render($form[$key]['locked']);
+      $row[] = drupal_render($form[$key]['display']);
       $row[] = drupal_render($form[$key]['position']);
       $row[] = (!empty($form[$key]['edit']))
           ? drupal_render($form[$key]['edit'])
@@ -1547,7 +1572,7 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
 
   // Render the main simple_queue table.  
   $header = array(t('Title'), t('Status'),
-    t('Create date'), t('Type'), t('Locked'), t('Position'), array('data' 
+    t('Create date'), t('Type'), t('Locked'), t('Display'), t('Position'), array('data' 
       => t('Actions'), 'colspan' => 2), t('Position'));
   
   $output .= theme('table', array('header' => $header, 'rows' => $rows,
