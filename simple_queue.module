@@ -140,7 +140,7 @@ function simple_queue_menu() {
     'page callback' => 'simple_queue_node_tab',
     'page arguments' => array(1),
     'access callback' => 'simple_queue_access',
-    'access arguments' => array('administer content types'),
+    'access arguments' => array('administer content types', 1),
     'file' => 'simple_queue.admin.inc',
     'weight' => 5,
     'type' => MENU_LOCAL_TASK,
@@ -1100,7 +1100,7 @@ function simple_queue_title_substitute($text, $queue) {
  *   srting $permission permission to access.
  * 
  * @param 
- *   array $queue a queue.
+ *   array $obj can be a queue or a node.
  *
  * @return 
  *   boolean if the user can access.
@@ -1108,13 +1108,8 @@ function simple_queue_title_substitute($text, $queue) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_access($permission, $queue = NULL) {
+function simple_queue_access($permission, $obj = NULL) {
   $access = FALSE;
-  $rids = array();
-  
-  if (is_object($queue)) {
-    $rids = $queue->roles;
-  }
   
   switch ($permission) {
     case SIMPLE_QUEUE_PERMISSION_LIST_QUEUES: 
@@ -1129,19 +1124,19 @@ function simple_queue_access($permission, $queue = NULL) {
     case SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES:      
       $access = (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES) 
           || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES) 
-          && simple_queue_validate_queue_same_roles($rids)));           
+          && simple_queue_validate_queue_same_roles($obj->roles)));           
       break;
       
     case SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES:
       $access = (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES) 
           || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES) 
-          && simple_queue_validate_queue_same_roles($rids)));    
+          && simple_queue_validate_queue_same_roles($obj->roles)));    
       break;
     
     case SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES:
       $access = (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES) 
           || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES) 
-          && simple_queue_validate_queue_same_roles($rids)));    
+          && simple_queue_validate_queue_same_roles($obj->roles)));    
       break;
     case SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES:
       $access = simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES);
@@ -1149,7 +1144,8 @@ function simple_queue_access($permission, $queue = NULL) {
     case 'administer content types':
       $access = ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES) 
         || simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES))) 
-        && user_access('administer content types');
+        && user_access('administer content types') 
+        && simple_queue_load_queues_by_type($obj->type);
       break;
   }
   

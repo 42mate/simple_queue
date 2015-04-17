@@ -821,10 +821,7 @@ function simple_queue_node_tab($node) {
   $output = '';
 
   $queues = simple_queue_load_queues_by_type($node->type);
-
-  if (!$queues) {
-    return FALSE;
-  }
+  
   $header = array();
   $header[] = array('data' => t('Queue'), 'field' => 'title', 'sort'
     => 'asc', 'class' => array('simple_queue-title'));
@@ -840,7 +837,7 @@ function simple_queue_node_tab($node) {
   $sort_secondary = array();
   $sort_direction_regular = array('asc' => SORT_ASC, 'desc' => SORT_DESC);
   $sort_direction_reverse = array('asc' => SORT_DESC, 'desc' => SORT_ASC);
-  
+
   foreach ($queues as $queue) {
     $sort_secondary[] = $queue->title;
     switch ($table_sort['sql']) {
@@ -860,7 +857,7 @@ function simple_queue_node_tab($node) {
     }
   }
 
-  if (!empty($table_sort)) {
+  if (!empty($table_sort) && !empty($queues)) {
     if (strtolower($table_sort['sort']) == 'desc') {
       array_multisort($sort_primary, $sort_direction['desc'], $sort_secondary,
           $queues); // Re-indexes array keys; key no longer equals qid.
@@ -923,7 +920,12 @@ function simple_queue_node_tab($node) {
     $row[] = array('class' => array('simple_queue-operation'), 'data' => $op);
     $rows[] = $row;
   }
-
+  
+  if (empty($rows)) {
+    $rows[] = array(array('data' => t('No queues for this node.'),
+      'colspan' => 9));
+  }
+  
   $output .= theme('table', array('header' => $header, 'rows' => $rows,
     'attributes' => array('class' => array('simple_queue-table'))));
   drupal_add_js(drupal_get_path('module', 'simple_queue') . '/simple_queue.js');
