@@ -274,7 +274,7 @@ function simple_queue_element_info() {
     '#input'         => TRUE,
     '#delta'         => 10,
     '#default_value' => 0,
-    '#process'       => array('process_position', 'ajax_process_form'),
+    '#process'       => array('simple_queue_process_position', 'ajax_process_form'),
   );
 
   return $type;
@@ -293,7 +293,7 @@ function simple_queue_element_info() {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function process_position($element) {
+function simple_queue_process_position($element) {
   for ($n = 1; $n <= $element['#delta']; $n++) {
     $positions[$n] = $n;
   }
@@ -676,21 +676,6 @@ function simple_queue_queue_add($queue, $nid) {
       simple_queue_check_queue_size($queue, $queue->size);
     }
   }
-}
-
-/**
- * Remove a queue.
- * 
- * @param 
- *   string $qid id of the queue.
- * 
- * @author  
- *   Daniel Anzawa daniel@42mate.com.
- */
-function simple_queue_remove_queue($qid) {
-  db_delete('simple_queue_queue')
-    ->condition('qid', $qid)
-    ->execute();
 }
 
 /**
@@ -1112,9 +1097,9 @@ function simple_queue_access($permission, $obj = NULL) {
   $access = FALSE;
   
   switch ($permission) {
-    case SIMPLE_QUEUE_PERMISSION_LIST_QUEUES: 
+    case SIMPLE_QUEUE_PERMISSION_LIST_QUEUES:       
       $access = (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES) 
-        || simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES));           
+        || simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES));    
       break;
     
     case SIMPLE_QUEUE_PERMISSION_ADD_QUEUES:
@@ -1169,7 +1154,7 @@ function simple_queue_access($permission, $obj = NULL) {
  */
 function simple_queue_validate_permission($permission) {
   global $user;  
-
+  
   foreach ($user->roles as $value) {
     if (in_array($value, user_roles(FALSE, $permission))) {
       return TRUE;
@@ -1335,37 +1320,6 @@ function simple_queue_check_token($seed) {
 }
 
 /**
- * Print the JSON output for our AJAX calls.
- * 
- * @param 
- *   type $name Description
- * 
- * @param 
- *   type $name Description
- * 
- * @param 
- *   type $name Description
- * 
- * @author  
- *   Daniel Anzawa daniel@42mate.com.
- */
-function simple_queue_js_output($label, $href, $count = NULL, $qid = NULL) {
-  $return = new stdClass();
-  $return->status = 1;
-  $return->label = check_plain($label);
-  $return->href = $href;
-  if (isset($count)) {
-    $return->count = $count;
-  }
-  if (isset($qid)) {
-    $return->qid = $qid;
-  }
-
-  drupal_json_output($return);
-  exit;
-}
-
-/**
  * Update of the property of the node.
  * 
  * @param 
@@ -1461,7 +1415,7 @@ function simple_queue_get_attribute_from_objects($objects, $attribute) {
  * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
-function get_default_display_from_types($types, $type) {
+function simple_queue_get_default_display_from_types($types, $type) {
   foreach ($types as $value) {
     if ($value->type === $type) {
       return $value->default_display;
@@ -1469,26 +1423,6 @@ function get_default_display_from_types($types, $type) {
   }
       
   return '';
-}
-
-/**
- * Get nids from nodes.
- * 
- * @param 
- *   array $nodes
- * 
- * @return 
- *   array nids.
- * 
- * @author
- *   Daniel Anzawa daniel@42mate.com.
- */
-function get_nids_from_queue($nodes) {
-  $nids = array();
-  foreach ($nodes as $key => $value) {
-    $nids[$key] = $value->nid;
-  }
-  return $nids;
 }
 
 /**
@@ -1508,7 +1442,7 @@ function get_nids_from_queue($nodes) {
  *   Daniel Anzawa daniel@42mate.com.
  * 
  */
-function verify_node_exist_queue($queue, $node_param) {    
+function simple_queue_verify_node_exist_queue($queue, $node_param) {    
   if (!property_exists($queue, 'nodes')) {
     return FALSE;
   }

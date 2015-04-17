@@ -248,7 +248,7 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
       '#type' => 'select',
       '#options' => simple_queue_get_view_modes_formatted($key),
       '#default_value' => empty($queue->types) ? array()
-      : get_default_display_from_types($queue->types, $key),
+      : simple_queue_get_default_display_from_types($queue->types, $key),
       '#states' => array(      
         'visible' => array(
           ':input[name="types[' . $key . ']"]' => array('checked' => TRUE),
@@ -870,7 +870,7 @@ function simple_queue_node_tab($node) {
 
   $rows = array();
   foreach ($queues as $queue) {    
-    if (verify_node_exist_queue($queue, $node)) {    
+    if (simple_queue_verify_node_exist_queue($queue, $node)) {    
       $op = l(
         t('Remove from queue'),
         "admin/structure/simple_queue/$queue->qid/remove-node/$node->nid",
