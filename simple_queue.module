@@ -663,11 +663,26 @@ function simple_queue_add_node($queue, $node) {
   if (!empty($node->nid)) {    
     $display = simple_queue_get_display_to_type($queue->types, $node->type);
     
-    db_query("INSERT INTO {simple_queue_nodes} (qid, nid, display, position, timestamp)"
+    if (empty($queue->direction)) {
+      db_query("INSERT INTO {simple_queue_nodes} (qid, nid, display, position, timestamp)"
         . " VALUES (:qid, :nid, :display, IFNULL((SELECT MAX(position)+1 FROM"
         . " (SELECT * from {simple_queue_nodes} WHERE qid = :qid) as nn), 1),"
         . " :time)", array(':qid' => $queue->qid, ':nid' => $node->nid, ':display' => $display, ':time'
           => REQUEST_TIME));
+    } 
+    else {      
+      db_update('simple_queue_nodes')
+        ->expression('position', 'position + 1')
+        ->condition('simple_queue_nodes.qid', $queue->qid)
+        ->execute();    
+      
+      db_query("INSERT INTO {simple_queue_nodes} (qid, nid, display, position, timestamp)"
+        . " VALUES (:qid, :nid, :display, 1, :time)",
+          array(':qid' => $queue->qid, ':nid' => $node->nid, ':display'
+            => $display, ':time'
+          => REQUEST_TIME));
+    }    
+    
     $queue->count = db_query("SELECT COUNT(nid) FROM {simple_queue_nodes}"
         . " WHERE qid = :qid", array(':qid' => $queue->qid))->fetchField();
     // If adding this would make the queue too big, pop the front node
@@ -956,7 +971,14 @@ function simple_queue_check_queue_size($queue, $size = NULL) {
   }
   
   if ($queue->count > $queue->size) {
-    simple_queue_queue_remove($queue->qid, 1, $queue->count - $size);
+    if (empty($queue->direction)) {
+      simple_queue_queue_remove($queue->qid, 1, $queue->count - $size);
+    }
+    else {
+     // die(var_dump('count', $queue->count, '$size', $size));
+      simple_queue_queue_remove_bottom($queue->qid, $size, $queue->count);
+    }
+    
     $queue->count = $size;
   }
 }
@@ -1007,6 +1029,47 @@ function simple_queue_queue_remove($qid, $start, $end = NULL) {
     ->expression('position', 'position - ' . $diff)
     ->condition('qid', $qid)
     ->condition('position', $end, '>')
+    ->execute();
+
+  // Invoke the hook to let other modules know that the nodes were removed.
+  foreach ($result as $node) {
+    module_invoke_all('simple_queue_remove', $qid, $node->nid);
+  }
+}
+
+/**
+ * Remove a node or node(s) to bottom from a simple_queue by position.
+ *
+ * If you know the nid but but not the position, use
+ * @see simple_queue_queue_remove_node() instead.
+ *
+ * @param 
+ *   string $qid The queue to remove nodes from.
+ * 
+ * @param 
+ *   string $start The first position (starting from size queue) to remove.
+ * 
+ * @param 
+ *   string $end The last position to remove.
+ *
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_queue_remove_bottom($qid, $start, $end) {
+  // Retrieve the nodes that are being removed.
+  $result = db_query("SELECT nid FROM {simple_queue_nodes} WHERE qid = :qid"
+      . " AND position > :start AND position <= :end",
+    array(
+      ':qid' => $qid,
+      ':start' => $start,
+      ':end' => $end,
+    )
+  );
+
+  db_delete('simple_queue_nodes')
+    ->condition('qid', $qid)
+    ->condition('position', $start, '>')
+    ->condition('position', $end, '<=')
     ->execute();
 
   // Invoke the hook to let other modules know that the nodes were removed.
