@@ -1,3 +1,12 @@
+/**
+  * @file
+  *   name: simple_queue.css.
+  *   Styling for simple_queue.
+  * 
+  * @author  
+  *   Daniel Anzawa daniel@42mate.com.
+  */
+
 .simple_queue-dragdrop .position {
   font-weight: bold;
   color: #999;

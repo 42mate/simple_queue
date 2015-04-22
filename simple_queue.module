@@ -274,7 +274,8 @@ function simple_queue_element_info() {
     '#input'         => TRUE,
     '#delta'         => 10,
     '#default_value' => 0,
-    '#process'       => array('simple_queue_process_position', 'ajax_process_form'),
+    '#process'       => array('simple_queue_process_position',
+      'ajax_process_form'),
   );
 
   return $type;
@@ -664,11 +665,12 @@ function simple_queue_add_node($queue, $node) {
     $display = simple_queue_get_display_to_type($queue->types, $node->type);
     
     if (empty($queue->direction)) {
-      db_query("INSERT INTO {simple_queue_nodes} (qid, nid, display, position, timestamp)"
-        . " VALUES (:qid, :nid, :display, IFNULL((SELECT MAX(position)+1 FROM"
-        . " (SELECT * from {simple_queue_nodes} WHERE qid = :qid) as nn), 1),"
-        . " :time)", array(':qid' => $queue->qid, ':nid' => $node->nid, ':display' => $display, ':time'
-          => REQUEST_TIME));
+      db_query("INSERT INTO {simple_queue_nodes} (qid, nid, display, position,"
+          . " timestamp) VALUES (:qid, :nid, :display,"
+          . " IFNULL((SELECT MAX(position)+1"
+          . " FROM (SELECT * from {simple_queue_nodes} WHERE qid = :qid) as nn),"
+          . " 1), :time)", array(':qid' => $queue->qid, ':nid' => $node->nid,
+            ':display' => $display, ':time' => REQUEST_TIME));
     } 
     else {      
       db_update('simple_queue_nodes')
@@ -676,11 +678,10 @@ function simple_queue_add_node($queue, $node) {
         ->condition('simple_queue_nodes.qid', $queue->qid)
         ->execute();    
       
-      db_query("INSERT INTO {simple_queue_nodes} (qid, nid, display, position, timestamp)"
-        . " VALUES (:qid, :nid, :display, 1, :time)",
-          array(':qid' => $queue->qid, ':nid' => $node->nid, ':display'
-            => $display, ':time'
-          => REQUEST_TIME));
+      db_query("INSERT INTO {simple_queue_nodes} (qid, nid, display, position,"
+          . " timestamp) VALUES (:qid, :nid, :display, 1, :time)", array(':qid'
+            => $queue->qid, ':nid' => $node->nid, ':display' => $display,
+            ':time' => REQUEST_TIME));
     }    
     
     $queue->count = db_query("SELECT COUNT(nid) FROM {simple_queue_nodes}"
@@ -1768,9 +1769,9 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
   }
 
   // Render the main simple_queue table.  
-  $header = array(t('Title'), t('Status'),
-    t('Create date'), t('Type'), t('Locked'), t('Display'), t('Position'), array('data' 
-      => t('Actions'), 'colspan' => 2), t('Position'));
+  $header = array(t('Title'), t('Status'), t('Create date'), t('Type'),
+    t('Locked'), t('Display'), t('Position'), array('data' => t('Actions'),
+      'colspan' => 2), t('Position'));
   
   $output .= theme('table', array('header' => $header, 'rows' => $rows,
     'attributes' => array('id' => $table_id, 'class' => $table_classes)));
