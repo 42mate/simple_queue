@@ -969,17 +969,151 @@ function simple_queue_check_queue_size($queue, $size = NULL) {
   if (!isset($size)) {
     $size = $queue->size;
   }
-  
-  if ($queue->count > $queue->size) {
-    if (empty($queue->direction)) {
-      simple_queue_queue_remove($queue->qid, 1, $queue->count - $size);
-    }
-    else {
-     // die(var_dump('count', $queue->count, '$size', $size));
-      simple_queue_queue_remove_bottom($queue->qid, $size, $queue->count);
-    }
+
+  if ($queue->count > $queue->size) {    
+    $diff = $queue->count - $queue->size;
     
+    if ($diff === 1) {
+      // diff = 1 means that added a node to the queue.
+      simple_queue_remove_node_from_queue($queue);
+    } 
+    else {
+      // diff superior to 1 means that modified to size of queue and size of
+      //  the queue is minor to quantity of node from the queue.
+      if (empty($queue->direction)) {
+        simple_queue_queue_remove($queue->qid, 1, $queue->count - $size);
+      }
+      else {
+        simple_queue_queue_remove_bottom($queue->qid, $size, $queue->count);
+      }
+    }
+
     $queue->count = $size;
+  }
+}
+
+/**
+ * Remove a node or node(s) from a simple_queue by position.
+ * 
+ * @param 
+ *   array $queue a queue.
+ *  
+ * @author  
+ *   Daniel Anzawa daniel@42mate.com.
+ */
+function simple_queue_remove_node_from_queue($queue) {
+  // The number of nodes does not match the size of the queue.
+  
+  $results = db_select('simple_queue_nodes', 'n')
+    ->fields('n')
+    ->execute();
+  
+  // The nodes from the queue.
+  $nodes = array();
+  
+  foreach ($results as $key => $node) {
+    $nodes[$key] = $node;
+  }
+
+  // If direction 1 of the queue so invert the position each other nodes
+  //  from the queue.
+  if (!empty($queue->direction)) {
+    $value = count($nodes) + 1;
+    
+    foreach ($nodes as $node) {
+      $node->position = $value - $node->position;
+    }
+  }
+  
+  // Step 1 - Subtract -1 to the position of each node in the queue.
+  foreach ($nodes as $node) {
+    if (empty($node->locked)) {
+      $node->position -= 1;
+    }    
+  }
+  
+  // Step 2 - check for positions 0. If  position 0 exist eliminate.
+  // 1st Get the  nodes index with position = 0, then iterate
+  // and remove these nodes from the queue.  
+  $position_zero_array = array();
+  foreach ($nodes as $key => $node) {
+    if (empty($node->position)) {
+      array_push($position_zero_array, $key);
+    }
+  }
+  
+  // Remove all nodes with the position 0
+  foreach ($position_zero_array as $key) {
+    unset($nodes[$key]);
+  }
+  
+  // Step 3 - the nodes repeated.
+  // 1st get the nodes with repeated position, then subtract -1 to the position
+  // of the nodes repeated and check until that
+  //  the queue not exist nodes repeated. if exist nodes with repeated position 
+  //  within the queue, repeat this step.  
+  $alt_nodes = $nodes;
+  $flag = TRUE;
+  while ($flag) {
+    $flag = FALSE;
+    foreach ($nodes as $node) {
+      if (empty($node->locked)) {
+        foreach ($alt_nodes as $alt_node) {
+          if ($node->nid !== $alt_node->nid 
+              && intval($node->position) === intval($alt_node->position)) {
+            $node->position -= 1;
+            $flag = TRUE;
+          }
+        }
+      }
+    }
+  }  
+  
+  // Check for positions 0. If  position 0 exist eliminate.
+  // 1st Get the  nodes index with position = 0, then iterate
+  // and remove these nodes from the queue.
+  $position_zero_array = array();
+  foreach ($nodes as $key => $node) {
+    if (empty($node->position)) {      
+      array_push($position_zero_array, $key);
+    }
+  }
+  
+  // Remove all nodes with the position 0 in case of that
+  //  the $position_zero_array has elements.
+  if (!empty($position_zero_array)) {
+    foreach ($position_zero_array as $key) {
+      unset($nodes[$key]);
+    }
+  }
+    
+  // If direction 1 of the queue convert the original position each one of
+  //  the nodes from the queue.
+  if (!empty($queue->direction)) {
+    $value = count($nodes) + 1;
+    
+    foreach ($nodes as $node) {
+      $node->position = $value - $node->position;
+    }
+  }
+  
+  // Remove all nodes from the queue.
+  db_delete('simple_queue_nodes')
+    ->condition('qid', $queue->qid)
+    ->execute();
+  
+  // Insert to the db all nodes ordered from the queue.
+  foreach ($nodes as $node) {    
+    db_insert('simple_queue_nodes')
+        ->fields(array(
+          'qid' => $queue->qid,
+          'nid' => $node->nid,
+          'display' => $node->display,
+          'position' => $node->position,
+          'timestamp' => REQUEST_TIME,
+          'locked' => $node->locked,
+        ))
+        ->execute();
   }
 }
 
