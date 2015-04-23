@@ -306,6 +306,10 @@ function simple_queue_edit_queue_form_validate($form, &$form_state) {
   if (!is_numeric($form_state['values']['size'])) {
     form_set_error('size', t('Please enter a numeric value to the size.'));
   }  
+  elseif ($form_state['values']['size'] < 0) {
+    form_set_error('size',
+        t('Please enter a numeric value superior or equal to 0.'));
+  }
 }
 
 /**
