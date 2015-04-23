@@ -1054,7 +1054,7 @@ function simple_queue_arrange_queue_form_add_validate($form, &$form_state) {
   }  
   
   // Validate textfield add when textfield is wrong data.
-  if(!empty($form_state['values']['add']['nid'])) {
+  if (!empty($form_state['values']['add']['nid'])) {
     $matches = array();
     preg_match('/\[nid: (\d+)\]$/', $form_state['values']['add']['nid'],
         $matches);
