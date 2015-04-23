@@ -1046,12 +1046,24 @@ function simple_queue_save_queue_order($nodes, $qid) {
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_arrange_queue_form_add_validate($form, &$form_state) {
-  // Validate textfield add.
+  // Validate textfield add when textfield is void.
   if (empty($form_state['values']['add']['nid']) ||
       ($form_state['values']['add']['nid'] === 
       t('Enter the title of a node to add it to the queue'))) {
     form_set_error('Node title', t('Please enter a title for the node.'));
   }  
+  
+  // Validate textfield add when textfield is wrong data.
+  if(!empty($form_state['values']['add']['nid'])) {
+    $matches = array();
+    preg_match('/\[nid: (\d+)\]$/', $form_state['values']['add']['nid'],
+        $matches);
+
+    $nid = empty($matches) ? $matches : $matches[1];
+    if (empty($nid)) {
+      form_set_error('', t('Please enter a valid node title.'));
+    }
+  }
 }
 
 /**
