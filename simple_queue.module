@@ -15,19 +15,13 @@ define('SIMPLE_QUEUE_PERMISSION_ADD_QUEUES', 'add queues');
 define('SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES', 'delete queues');
 define('SIMPLE_QUEUE_PERMISSION_EDIT_QUEUES', 'edit queues');
 define('SIMPLE_QUEUE_PERMISSION_VIEW_ROLES_QUEUES', 'view roles queues');
-define('SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES',
-    'edit same roles queues');
-define('SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES',
-    'delete same roles queues');
-define('SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES',
-    'view same roles queues');
+define('SIMPLE_QUEUE_PERMISSION_EDIT_SAME_ROLES_QUEUES', 'edit same roles queues');
+define('SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES', 'delete same roles queues');
+define('SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES', 'view same roles queues');
 define('SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES', 'add nodes queues');
-define('SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES',
-    'add nodes same roles queues');
+define('SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES', 'add nodes same roles queues');
 define('SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES', 'locked unlocked nodes');
 define('SIMPLE_QUEUE_PERMISSION_LIST_QUEUES', 'list queue');
-
-/* --- HOOKS ---------------------------------------------------------------- */
 
 /**
  * Implements hook_permission().
@@ -208,6 +202,35 @@ function simple_queue_menu() {
 }
 
 /**
+ * Implements hook_blok_info.
+ */
+function simple_queue_block_info() {
+
+  $blocks = array();
+
+  $qids = simple_queue_get_all_qids();
+  foreach ($qids as $qid) {
+    $queue = simple_queue_load($qid);
+    $blocks['sq_' . $qid] = array(
+      'info' => 'Simple Queue - "' . $queue->title . '"',
+      'cache' => $queue->block_cache,
+    );
+  }
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view.
+ */
+function simple_queue_block_view($delta = '') {
+  $parts = explode('_', $delta);
+  $qid = array_pop($parts);
+  $block['content'] = simple_queue_render($qid);
+  return $block;
+}
+
+/**
  * Implements hook_admin_paths().
  * 
  * @author  
@@ -284,14 +307,11 @@ function simple_queue_element_info() {
 /**
  * Expand position elements into selects. Works like the weight element, except
  * only positive values are allowed.
- * 
- * @param 
+ *
+ * @param
  *   array $element Description.
- * 
- * @return 
- *   array Description
- * 
- * @author  
+ *
+ * @return array array Description@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_process_position($element) {
@@ -393,17 +413,15 @@ function simple_queue_get_all_qids($page_size = 0, $pager_element = 0,
 /**
  * Fetch a list of available queues for a given location. These queues
  * will be fully loaded and ready to go.
- * 
- * @param 
- *   string $type content type.
- * 
- * @param
- *   stdClass $account.
- * 
- * @return 
- *   array queues.
- * 
- * @author  
+ *
+ * @param $type
+ * @param null $account
+ * @param bool $bypass_cache
+ * @internal param $ string $type content type.*   string $type content type.
+ *
+ * @internal param $ stdClass $account.*   stdClass $account.
+ *
+ * @return array array queues.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_load_queues_by_type($type, $account = NULL,
@@ -473,16 +491,13 @@ function simple_queue_get_qids($type, $account = NULL, $bypass_cache = FALSE) {
  * not 20. This also caches queues so that they don't get loaded
  * repeatedly.
  *
- * @param 
- *   array $qids An array of queue IDs to load.
- *
- * @param $bypass_cache
+ * @param array $qids
+ * @param bool $bypass_cache
  *   Boolean value indicating whether to bypass the cache or not.
- * 
- * @return 
- *   array object queue.
- * 
- * @author  
+ *
+ * @internal param $ array $qids An array of queue IDs to load.*   array $qids An array of queue IDs to load.
+ *
+ * @return array array object queue.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
@@ -553,11 +568,12 @@ function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
 
 /**
  * Save a simple_queue.
- * 
- * @param 
+ *
+ * @param
  *   array $queue queue.
- * 
- * @author  
+ *
+ * @return \DatabaseStatementInterface|int|null
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_save(&$queue) {
@@ -566,6 +582,8 @@ function simple_queue_save(&$queue) {
     'title' => $queue->title,
     'size' => $queue->size,
     'direction' => $queue->direction,
+    'block_cache' => $queue->block_cache,
+    'block_title' => $queue->block_title,
   );
 
   if (!isset($queue->qid)) {
@@ -700,16 +718,13 @@ function simple_queue_add_node($queue, $node) {
  * Fetch a list of nodes available to a given queue
  * for autocomplete.
  *
- * @param 
- *   array $queue The queue.
- * 
- * @param 
- *   string $string The string being matched.
+ * @param $queue
+ * @param $string
+ * @internal param $ array $queue The queue.*   array $queue The queue.
  *
- * @return
- *   An keyed array $nid => $title.
- * 
- * @author  
+ * @internal param $ string $string The string being matched.*   string $string The string being matched.
+ *
+ * @return array An keyed array $nid => $title.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_api_autocomplete($queue, $string) {
@@ -945,7 +960,7 @@ function simple_queue_queue_remove_node($qid, $nid) {
   $pos = simple_queue_get_queue_position($qid, $nid);
   if ($pos) {
     simple_queue_queue_remove($qid, $pos);
-    if (module_exists('apachesolr')) {
+    if (module_exists('apachesolr') && function_exists('apachesolr_mark_node')) {
       apachesolr_mark_node($nid);
     }
   }
@@ -1215,20 +1230,21 @@ function simple_queue_queue_remove_bottom($qid, $start, $end) {
 
 /**
  * Get a textual representation of a simple_queue's queue size.
- * 
- * @param 
+ *
+ * @param $max
+ * @param $count
+ * @param bool $long
+ * @internal param $ string $max Description
  *   string $max Description
- * 
- * @param 
+ *
+ * @internal param $ string $count Description
  *   string $count Description
- * 
- * @param 
+ *
+ * @internal param $ boolean $long Description
  *   boolean $long Description
- * 
- * @return  
- *   string Description
- * 
- * @author  
+ *
+ * @return string string Description
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_queue_size_text($max, $count, $long = TRUE) {
@@ -1255,17 +1271,16 @@ function simple_queue_queue_size_text($max, $count, $long = TRUE) {
  *
  * This function does NOT check_plain the title! The output MUST be checked
  * after this is complete.
- * 
- * @param 
+ *
+ * @param $text
+ * @param $queue
+ * @internal param $ string $text Description
  *   string $text Description
- * 
- * @param 
+ *
+ * @internal param $ array $queue a queue.
  *   array $queue a queue.
- * 
- * @return 
- *   string Description
- * 
- * @author  
+ *
+ * @return mixed string Description@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_title_substitute($text, $queue) {
@@ -1275,22 +1290,17 @@ function simple_queue_title_substitute($text, $queue) {
   return str_replace('%queue', $queue->title, $text);
 }
 
-/* --- UTILITY -------------------------------------------------------------- */
-
 /**
  * Helper function - since hook_menu now takes a function instead of a boolean,
  * this function is used to compute the user's access.
- * 
- * @param 
- *   srting $permission permission to access.
- * 
- * @param 
- *   array $obj can be a queue or a node.
  *
- * @return 
- *   boolean if the user can access.
- * 
- * @author  
+ * @param
+ *   string $permission permission to access.
+ *
+ * @param
+ *    array $obj can be a queue or a node.
+ *
+ * @return bool boolean if the user can access.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_access($permission, $obj = NULL) {
@@ -1340,15 +1350,10 @@ function simple_queue_access($permission, $obj = NULL) {
 /**
  * Validate permission.
  *
- * @param
- *   array $permission the permission types.
+ * @param $permission
  *
- * @global
- *   object $user.
+ * @return bool boolean.
  *
- * @return 
- *   bool boolean.
- * 
  * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
@@ -1367,15 +1372,10 @@ function simple_queue_validate_permission($permission) {
 /**
  * Validate if the user has the same roles than queue.
  *
- * @param
- *   array $rids roles from queue.
+ * @param $rids
  *
- * @global
- *   object $user.
+ * @return bool bool boolean.
  *
- * @return 
- *   bool boolean.
- * 
  * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
@@ -1415,14 +1415,12 @@ function simple_queue_machine_name_exists($machine_name) {
 /**
  * Get the list of nodes in the queue,
  *  taking into account node access restrictions.
- * 
- * @param 
- *   string $qid id of the queue.
- * 
- * @return 
- *   array list of nodes in the queue.
- * 
- * @author  
+ *
+ * @param $qid
+ * @param null $account
+ * @internal param $ string $qid id of the queue.*   string $qid id of the queue.
+ *
+ * @return array array list of nodes in the queue.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_nids_visible($qid = -1, $account = NULL) {
@@ -1460,21 +1458,12 @@ function simple_queue_nids_visible($qid = -1, $account = NULL) {
 /**
  * Generate a query string to use on simple_queue's private links.
  *
- * @param 
- *   string $seed The seed to use when generating a token. If NULL no token will
- *   be generated.
- * 
- * @param 
- *   $destination The destination to use. If FALSE one won't be used; if TRUE
- *   one will be generated from drupal_get_destination().
- * 
  * @param
  *   $query An array of additional items to add to the query.
  *
- * @return
- *   The query string suitable for use in the l() function.
- * 
- * @author  
+ * @param bool $destination
+ * @param array $query
+ * @return array The query string suitable for use in the l() function.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_get_query_string($seed, $destination = FALSE,
@@ -1494,11 +1483,12 @@ function simple_queue_get_query_string($seed, $destination = FALSE,
 
 /**
  * Get a private token used to protect simple_queue's links from spoofing.
- * 
+ *
  * @param
  *   string $nid id of the node.
- * 
- * @author  
+ *
+ * @return string
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_get_token($nid) {
@@ -1507,12 +1497,13 @@ function simple_queue_get_token($nid) {
 
 /**
  * Check to see if the token generated from seed matches.
- * 
- * @param 
+ *
+ * @param
  *   string $seed The seed to use when generating a token. If NULL no token will
  *   be generated.
- * 
- * @author  
+ *
+ * @return bool
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_check_token($seed) {
@@ -1550,11 +1541,10 @@ function simple_queue_node_custom_update($nid, $property, $value) {
 /**
  * Get view modes formatted.
  *
- * @param 
+ * @param
  *   $bundle The bundle name to return view mode settings for.
  *
- * @return 
- *   array View modes formatted.
+ * @return array array View modes formatted.
  *
  * @author
  *   Daniel Anzawa daniel@42mate.com.
@@ -1577,16 +1567,15 @@ function simple_queue_get_view_modes_formatted($bundle) {
 
 /**
  * Get attribute from objects.
- * 
- * @param 
- *   array $objects an array of types.
- * 
- * @param 
- *   var $attribute Attribute to change.
- * 
- * @return 
- *   array an array with the attribute.
- * 
+ *
+ * @param $objects
+ * @param $attribute
+ *
+ * @internal param $ array $objects an array of types.*   array $objects an array of types.
+ * @internal param $ var $attribute Attribute to change.*   var $attribute Attribute to change.
+ *
+ * @return array array an array with the attribute
+ *
  * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
@@ -1602,16 +1591,14 @@ function simple_queue_get_attribute_from_objects($objects, $attribute) {
 
 /**
  * Get default_display from types.
- * 
- * @param 
- *   array $types an array with type.
- * 
- * @param 
- *   string $type content type.
- * 
- * @return
- *    string default_display.
- * 
+ *
+ * @param $types
+ * @param $type
+ *
+ * @internal param $ array $types an array with type.*   array $types an array with type.
+ * @internal param $ string $type content type.*   string $type content type.
+ *
+ * @return string string default_display.
  * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
@@ -1626,21 +1613,21 @@ function simple_queue_get_default_display_from_types($types, $type) {
 }
 
 /**
- * Verify if the node exist on the queue. 
+ * Verify if the node exist on the queue.
  * In case that exist return true another case return false.
- * 
- * @param 
- *   stdClass $queue a queue.
- * 
- * @param 
- *   stdClass $node_param node.
- * 
- * @return 
- *   boolean exist or not the node in the queue.
- * 
+ *
+ * @param $queue
+ * @param $node_param
+ * @internal param $ stdClass $queue a queue.
+ *  stdClass $queue a queue.
+ *
+ * @internal param $ stdClass $node_param node.
+ *  stdClass $node_param node.
+ *
+ * @return bool boolean exist or not the node in the queue.
+ *
  * @author
  *   Daniel Anzawa daniel@42mate.com.
- * 
  */
 function simple_queue_verify_node_exist_queue($queue, $node_param) {    
   if (!property_exists($queue, 'nodes')) {
@@ -1659,15 +1646,16 @@ function simple_queue_verify_node_exist_queue($queue, $node_param) {
 
 /**
  * Get display to a type from types array.
- * 
- * @param 
+ *
+ * @param $types
+ * @param $type_arg
+ * @internal param $ array $types an array of types.
  *   array $types an array of types.
- * 
- * @param 
+ *
+ * @internal param $ string $type content type name.
  *   string $type content type name.
- * 
- * @return 
- *   string diplay type.
+ *
+ * @return bool string display type.
  */
 function simple_queue_get_display_to_type($types, $type_arg) {
   foreach ($types as $type) {
@@ -1683,17 +1671,16 @@ function simple_queue_get_display_to_type($types, $type_arg) {
 
 /**
  * Theme the queue overview as a sortable list.
- * 
- * @ingroup 
- *   themeable
- * 
- * @param 
- *   array $variables Allow access to the form.
- * 
- * @return 
- *   string render of the form table.
  *
- * @author  
+ * @ingroup
+ *   themeable
+ *
+ * @param
+ *   array $variables Allow access to the form.
+ *
+ * @return string string render of the form table.
+ *
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function theme_simple_queue_arrange_queue_form_table($variables) {
@@ -1781,14 +1768,12 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
 
 /**
  * Return a "queue is empty" message.
- * 
- * @ingroup 
- *   themeable
- * 
- * @return 
- *   string a "queue is empty" message.
  *
- * @author  
+ * @ingroup
+ *   themeable
+ *
+ * @return null|string string a "queue is empty" message.
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function theme_simple_queue_queue_empty_text() {
@@ -1797,14 +1782,12 @@ function theme_simple_queue_queue_empty_text() {
 
 /**
  * Return a "queue is full" message.
- * 
- * @ingroup 
- *   themeable
- * 
- * @return
- *   string a "queue is full" message.
  *
- * @author  
+ * @ingroup
+ *   themeable
+ *
+ * @return null|string string a "queue is full" message.
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function theme_simple_queue_queue_full_text() {
@@ -1813,17 +1796,16 @@ function theme_simple_queue_queue_full_text() {
 
 /**
  * Return a count of elements in the queue.
- * 
- * @ingroup 
- *   themeable
- * 
- * @param 
- *   array $variables Description.
- * 
- * @return 
- *   string a count of elements in the queue.
  *
- * @author  
+ * @ingroup
+ *   themeable
+ *
+ * @param
+ *   array $variables Description.
+ *
+ * @return null|string string a count of elements in the queue.
+ *
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function theme_simple_queue_queue_count_text($variables) {
@@ -1887,18 +1869,29 @@ function simple_queue_render($qid) {
   $queue = simple_queue_load($qid);
 
   if ($queue) {
+    $title = '';
+    if (!empty($queue->block_title)) {
+      $title = array(
+        '#markup' => '<h2>' . t($queue->block_title) . '</h2>',
+      );
+    }
+
     $render = array(
       '#show_messages' => TRUE,
       '#type' => 'container',
-      '#attributes' => array('class' => 'queue-' . $queue->name),
-      'nodes' => array(),
+      '#attributes' => array('class' => 'queue queue-' . $queue->name),
+      'title' => $title,
+      'items' => array(
+        '#type' => 'container',
+        '#attributes' => array('class' => 'queue-items queue-items-' . $queue->name),
+        'nodes' => array(),
+      ),
     );
 
     foreach ($queue->nodes as $queue_node) {
       $node = node_load($queue_node->nid);
-      $render['nodes'][] = node_view($node, $queue_node->display);
+      $render['items']['nodes'][] = node_view($node, $queue_node->display);
     }
   }
-
   return $render;
 }

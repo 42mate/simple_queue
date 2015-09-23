@@ -12,11 +12,10 @@
 
 /**
  * Display a list of queues and their status for the administrator.
- * 
- * @return 
- *   array.
- * 
- * @author  
+ *
+ * @return string array.
+ *
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_queues_list() { 
@@ -211,11 +210,35 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
   
   $form['direction'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Direction'),
+    '#title' => t('Append from the Top'),
     '#default_value' => $queue->direction,
     '#description' => t('How the new nodes are going to be added to the queue.'
-        . ' 0 (no marked) means from top, 1 (marked) means from the bottom. .'),
-  );  
+        . ' checked means from top, unchecked means from the bottom. .'),
+  );
+
+  $form['block_cache'] = array(
+    '#type' => 'select',
+    '#title' => t('Block Cache'),
+    '#required' => TRUE,
+    '#default_value' => empty($queue->block_cache) ? -1 : $queue->block_cache,
+    '#options' => array(
+      DRUPAL_CACHE_PER_USER => 'DRUPAL_CACHE_PER_USER',
+      DRUPAL_CACHE_PER_ROLE => 'DRUPAL_CACHE_PER_ROLE',
+      DRUPAL_CACHE_PER_PAGE => 'DRUPAL_CACHE_PER_PAGE',
+      DRUPAL_CACHE_GLOBAL => 'DRUPAL_CACHE_GLOBAL',
+      DRUPAL_NO_CACHE => 'DRUPAL_NO_CACHE',
+
+    ),
+    '#description' => t('Select the cache type for block usages.'),
+  );
+
+  $form['block_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Use a Block Title'),
+    '#required' => FALSE,
+    '#default_value' => empty($queue->block_title) ? '' : $queue->block_title,
+    '#description' => t('Use a Block Title if you need it, leave it blank to dont\'t use a title'),
+  );
 
   $form['roles'] = array(
     '#type' => 'checkboxes',
@@ -236,10 +259,8 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
     '#required' => TRUE, 
     '#default_value' => empty($queue->types) ? array()
     : simple_queue_get_attribute_from_objects($queue->types, 'type'),
-    '#options'
-    => $node_type_names, // Returns a list of available node type names.
-    '#description'
-    => t('Check each node type that can be added to this queue.'),
+    '#options' => $node_type_names, // Returns a list of available node type names.
+    '#description' => t('Check each node type that can be added to this queue.'),
   );
   
   foreach ($node_type_names as $key => $value) {
@@ -341,7 +362,9 @@ function simple_queue_edit_queue_form_submit($form_id, &$form_state) {
 
   if (!isset($queue->qid)) {
     $queue->new = TRUE;
-  } 
+  }
+
+  //var_dump($queue); die();
 
   $qid = simple_queue_save($queue); // sets $queue->qid if needed. 
   

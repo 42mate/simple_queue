@@ -51,6 +51,18 @@ function simple_queue_schema() {
         'size' => 'tiny',
         'default' => 0,
       ),
+      'block_cache' => array(
+        'description' => 'Block Cache Type',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => -1,
+      ),
+      'block_title' => array(
+        'description' => 'Title for the Block',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
     ), // fields.
     'primary key' => array('qid'),
     'unique keys' => array(
