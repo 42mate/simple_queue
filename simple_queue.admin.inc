@@ -582,11 +582,7 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
       $form['nodes'][$node->nid]['type'] = array('#markup' => $node->type);
       $form['nodes'][$node->nid]['locked'] = simple_queue_validate_permission(
           SIMPLE_QUEUE_PERMISSION_LOCK_UNLOCK_NODES) ? array(
-        '#type' => 'select',
-        '#options' => array(
-          0,
-          1,
-        ),
+        '#type' => 'checkbox',
         '#default_value' => intval($node->locked),
       ) : array('#markup' => $node->locked);
       $form['nodes'][$node->nid]['date'] = array('#markup' => 
