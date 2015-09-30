@@ -122,7 +122,7 @@ function simple_queue_queues_list() {
       array('class' => array('simple_queue-nodes'), 'data' 
         => empty($queue->nodes) ? 0 : count($queue->nodes)),
       array('class' => array('simple_queue-direction'), 'data' 
-        => $queue->direction),
+        => t('From') . ' ' . (empty($queue->direction) ? t('bottom') : t('top'))),
       array('class' => array('simple_queue-operation'), 'data'
         => implode(' | ', $operations)),
     );
@@ -204,16 +204,15 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
     '#default_value' => $queue->size,
     '#size' => 2,
     '#maxlength' => 2,
-    '#description' => t('The maximum number of nodes will appear in the queue.'
-        . ' Enter 0 for no limit'),
+    '#description' => t('The maximum number of nodes will appear in the queue. Enter 0 for no limit'),
   );
   
   $form['direction'] = array(
     '#type' => 'checkbox',
     '#title' => t('Append from the Top'),
     '#default_value' => $queue->direction,
-    '#description' => t('How the new nodes are going to be added to the queue.'
-        . ' checked means from top, unchecked means from the bottom. .'),
+    '#description' => t('How the new nodes are going to be added to the queue.
+      Checked means from top, unchecked means from the bottom.'),
   );
 
   $form['block_cache'] = array(
@@ -227,7 +226,6 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
       DRUPAL_CACHE_PER_PAGE => 'DRUPAL_CACHE_PER_PAGE',
       DRUPAL_CACHE_GLOBAL => 'DRUPAL_CACHE_GLOBAL',
       DRUPAL_NO_CACHE => 'DRUPAL_NO_CACHE',
-
     ),
     '#description' => t('Select the cache type for block usages.'),
   );
@@ -244,13 +242,12 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
     '#type' => 'checkboxes',
     '#title' => t('Roles'),
     '#required' => TRUE,
-    '#default_value' => empty($queue->roles) ? array() : $queue->roles,
+    '#default_value' => empty($queue->roles) ? array(1) : $queue->roles,
     '#options' => user_roles(),
-    '#description' => t('Check each role that can add nodes to the queue.'
-        . ' Be sure that roles you want to appear here have "manipulate queues"'
-        . ' access in the main access control panel.'),
+    '#description' => t('Check each role that can add nodes to the queue. Be sure that
+      roles you want to appear here have "manipulate queues" access in the main access control panel.'),
   );
-  
+
   $node_type_names = node_type_get_names();
   
   $form['types'] = array(
@@ -276,15 +273,25 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
         ),
       ),
     );
-  } 
-  
+  }
+
+  $form['buttons'] = array(
+    '#type' => 'actions',
+    '#weight' => 1,
+  );
+
+  $form['buttons']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
   // In case of edit queue.  
   if (isset($queue->qid)) {
     if ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES)
         || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES)
         && simple_queue_validate_queue_same_roles($queue->roles)))) {    
       
-      $form[] = array(
+      $form['buttons'][] = array(
         '#type' => 'submit',
         '#value' => t('Delete'),
         '#submit' => array('simple_queue_edit_queue_form_delete_submit'),
@@ -296,11 +303,6 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
       '#value' => $queue->qid,
     );
   }
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Submit'),
-  );
 
   return $form;
 }
@@ -364,9 +366,7 @@ function simple_queue_edit_queue_form_submit($form_id, &$form_state) {
     $queue->new = TRUE;
   }
 
-  //var_dump($queue); die();
-
-  $qid = simple_queue_save($queue); // sets $queue->qid if needed. 
+  $qid = simple_queue_save($queue); // sets $queue->qid if needed.
   
   if (!isset($queue->new)) {    
     if ($queue->size) {
