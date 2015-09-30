@@ -227,7 +227,6 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
       DRUPAL_CACHE_PER_PAGE => 'DRUPAL_CACHE_PER_PAGE',
       DRUPAL_CACHE_GLOBAL => 'DRUPAL_CACHE_GLOBAL',
       DRUPAL_NO_CACHE => 'DRUPAL_NO_CACHE',
-
     ),
     '#description' => t('Select the cache type for block usages.'),
   );
@@ -244,13 +243,12 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
     '#type' => 'checkboxes',
     '#title' => t('Roles'),
     '#required' => TRUE,
-    '#default_value' => empty($queue->roles) ? array() : $queue->roles,
+    '#default_value' => empty($queue->roles) ? array(1) : $queue->roles,
     '#options' => user_roles(),
-    '#description' => t('Check each role that can add nodes to the queue.'
-        . ' Be sure that roles you want to appear here have "manipulate queues"'
-        . ' access in the main access control panel.'),
+    '#description' => t('Check each role that can add nodes to the queue. Be sure that
+      roles you want to appear here have "manipulate queues" access in the main access control panel.'),
   );
-  
+
   $node_type_names = node_type_get_names();
   
   $form['types'] = array(
@@ -276,15 +274,25 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
         ),
       ),
     );
-  } 
-  
+  }
+
+  $form['buttons'] = array(
+    '#type' => 'actions',
+    '#weight' => 1,
+  );
+
+  $form['buttons']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
   // In case of edit queue.  
   if (isset($queue->qid)) {
     if ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_QUEUES)
         || (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_DELETE_SAME_ROLES_QUEUES)
         && simple_queue_validate_queue_same_roles($queue->roles)))) {    
       
-      $form[] = array(
+      $form['buttons'][] = array(
         '#type' => 'submit',
         '#value' => t('Delete'),
         '#submit' => array('simple_queue_edit_queue_form_delete_submit'),
@@ -296,11 +304,6 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
       '#value' => $queue->qid,
     );
   }
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Submit'),
-  );
 
   return $form;
 }
