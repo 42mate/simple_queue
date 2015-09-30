@@ -364,9 +364,7 @@ function simple_queue_edit_queue_form_submit($form_id, &$form_state) {
     $queue->new = TRUE;
   }
 
-  //var_dump($queue); die();
-
-  $qid = simple_queue_save($queue); // sets $queue->qid if needed. 
+  $qid = simple_queue_save($queue); // sets $queue->qid if needed.
   
   if (!isset($queue->new)) {    
     if ($queue->size) {
