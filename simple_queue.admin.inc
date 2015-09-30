@@ -122,7 +122,7 @@ function simple_queue_queues_list() {
       array('class' => array('simple_queue-nodes'), 'data' 
         => empty($queue->nodes) ? 0 : count($queue->nodes)),
       array('class' => array('simple_queue-direction'), 'data' 
-        => $queue->direction),
+        => t('From') . ' ' . (empty($queue->direction) ? t('bottom') : t('top'))),
       array('class' => array('simple_queue-operation'), 'data'
         => implode(' | ', $operations)),
     );
@@ -204,16 +204,15 @@ function simple_queue_edit_queue_form($form, &$form_state, $queue) {
     '#default_value' => $queue->size,
     '#size' => 2,
     '#maxlength' => 2,
-    '#description' => t('The maximum number of nodes will appear in the queue.'
-        . ' Enter 0 for no limit'),
+    '#description' => t('The maximum number of nodes will appear in the queue. Enter 0 for no limit'),
   );
   
   $form['direction'] = array(
     '#type' => 'checkbox',
     '#title' => t('Append from the Top'),
     '#default_value' => $queue->direction,
-    '#description' => t('How the new nodes are going to be added to the queue.'
-        . ' checked means from top, unchecked means from the bottom. .'),
+    '#description' => t('How the new nodes are going to be added to the queue.
+      Checked means from top, unchecked means from the bottom.'),
   );
 
   $form['block_cache'] = array(
