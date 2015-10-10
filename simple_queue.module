@@ -129,8 +129,7 @@ function simple_queue_menu() {
 
   $items['node/%node/simple_queue'] = array(
     'title' => '@tab',
-    'title arguments' => array('@tab' => variable_get('simple_queue_tab_name',
-        'simple_queue')),
+    'title arguments' => array('@tab' => variable_get('simple_queue_tab_name', 'Simple queue')),
     'page callback' => 'simple_queue_node_tab',
     'page arguments' => array(1),
     'access callback' => 'simple_queue_access',
@@ -424,8 +423,7 @@ function simple_queue_get_all_qids($page_size = 0, $pager_element = 0,
  * @return array array queues.@author
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_load_queues_by_type($type, $account = NULL,
-    $bypass_cache = FALSE) {
+function simple_queue_load_queues_by_type($type, $account = NULL, $bypass_cache = FALSE) {
   $qids = simple_queue_get_qids($type, $account, $bypass_cache);
 
   return simple_queue_load_queues(array_keys($qids), $bypass_cache);
@@ -457,21 +455,24 @@ function simple_queue_get_qids($type, $account = NULL, $bypass_cache = FALSE) {
     $account = $user;
   }
 
-  static $cache = array();
+  $cache = &drupal_static(__FUNCTION__, array());
+
   if ($bypass_cache || !isset($cache[$type])) {
     $roles_join = $roles_where = '';
     $roles = array();
-    
-    $roles_join = "INNER JOIN {simple_queue_roles} nr ON nr.qid = nq.qid ";
-    $roles = array_keys((array) $account->roles)
-        + array(DRUPAL_AUTHENTICATED_RID);
 
-    $roles_where .= "AND nr.rid IN (:roles)";
+    // superuser always has access.
+    if (!user_access('edit queues', $account)) {
+      $roles_join = "INNER JOIN {simple_queue_roles} sr ON sr.qid = sq.qid ";
+      $roles = array_keys((array) $account->roles) + array(DRUPAL_AUTHENTICATED_RID);
 
-    $sql = 'SELECT nq.qid ' .
-      'FROM {simple_queue_queue} nq ' .
-      'INNER JOIN {simple_queue_types} nt ON nt.qid = nq.qid ' . $roles_join .
-      "WHERE nt.type = :type " . $roles_where;
+      $roles_where .= "AND sr.rid IN (:roles)";
+    }
+
+    $sql = 'SELECT sq.qid ' .
+      'FROM {simple_queue_queue} sq ' .
+      'INNER JOIN {simple_queue_types} st ON st.qid = sq.qid ' . $roles_join .
+      "WHERE st.type = :type " . $roles_where;
     $result = db_query($sql, array(':type' => $type, ':roles' => $roles));
 
     $qids = array();
@@ -480,6 +481,7 @@ function simple_queue_get_qids($type, $account = NULL, $bypass_cache = FALSE) {
     }
     $cache[$type] = $qids;
   }
+
   return $cache[$type];
 }
 
@@ -1305,7 +1307,7 @@ function simple_queue_title_substitute($text, $queue) {
  */
 function simple_queue_access($permission, $obj = NULL) {
   $access = FALSE;
-  
+
   switch ($permission) {
     case SIMPLE_QUEUE_PERMISSION_LIST_QUEUES:       
       $access = (simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES) 
@@ -1339,8 +1341,8 @@ function simple_queue_access($permission, $obj = NULL) {
     case 'administer content types':
       $access = ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_LIST_QUEUES) 
         || simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_VIEW_SAME_ROLES_QUEUES))) 
-        && user_access('administer content types') 
-        && simple_queue_load_queues_by_type($obj->type);
+        && user_access('administer content types');
+//        && simple_queue_load_queues_by_type($obj->type);
       break;
   }
   
