@@ -857,18 +857,13 @@ function simple_queue_admin_add_node($queue, $node) {
  */
 function simple_queue_node_tab($node) {
   $output = '';
-
   $queues = simple_queue_load_queues_by_type($node->type);
-  
+
   $header = array();
-  $header[] = array('data' => t('Queue'), 'field' => 'title', 'sort'
-    => 'asc', 'class' => array('simple_queue-title'));
-  $header[] = array('data' => t('Max nodes'), 'field' => 'size', 'class'
-    => array('simple_queue-max-nodes'));
-  $header[] = array('data' => t('In queue'), 'field' => 'count', 'class'
-    => array('simple_queue-in-queue'));
-  $header[] = array('data' => t('Operation'), 'class'
-    => array('simple_queue-operation'));
+  $header[] = array('data' => t('Queue'), 'field' => 'title', 'sort' => 'asc', 'class' => array('simple_queue-title'));
+  $header[] = array('data' => t('Max nodes'), 'field' => 'size', 'class' => array('simple_queue-max-nodes'));
+  $header[] = array('data' => t('In queue'), 'field' => 'count', 'class' => array('simple_queue-in-queue'));
+  $header[] = array('data' => t('Operation'), 'class' => array('simple_queue-operation'));
   $table_sort = tablesort_init($header);
 
   $sort_primary = array();
@@ -897,12 +892,12 @@ function simple_queue_node_tab($node) {
 
   if (!empty($table_sort) && !empty($queues)) {
     if (strtolower($table_sort['sort']) == 'desc') {
-      array_multisort($sort_primary, $sort_direction['desc'], $sort_secondary,
-          $queues); // Re-indexes array keys; key no longer equals qid.
+      // Re-indexes array keys; key no longer equals qid.
+      array_multisort($sort_primary, $sort_direction['desc'], $sort_secondary, $queues);
     }
     else {
-      array_multisort($sort_primary, $sort_direction['asc'], $sort_secondary, 
-          $queues); // Re-indexes array keys; key no longer equals qid.
+      // Re-indexes array keys; key no longer equals qid.
+      array_multisort($sort_primary, $sort_direction['asc'], $sort_secondary, $queues);
     }
   }
 
