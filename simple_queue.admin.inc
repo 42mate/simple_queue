@@ -706,7 +706,9 @@ function simple_queue_arrange_queue_form($form, $form_state, $queue, $nodes) {
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_arrange_queue_form_validate($form, &$form_state) {
+
   $positions = array();
+
   foreach ($form_state['values'] as $nid => $element) {
     if (is_numeric($nid) && is_numeric($element['position'])) {
       $positions[$nid] = $element['position'];
@@ -826,7 +828,8 @@ function simple_queue_admin_remove_node($queue, $node) {
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
-function simple_queue_admin_add_node($queue, $node) {  
+function simple_queue_admin_add_node($queue, $node) {
+
   if ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES)
         || (simple_queue_validate_permission(
             SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES)
@@ -915,8 +918,8 @@ function simple_queue_node_tab($node) {
       );
     }
     else {      
-      if ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES)
-        || (simple_queue_validate_permission(
+      if ((simple_queue_validate_permission(SIMPLE_QUEUE_PERMISSION_ADD_NODES_QUEUES) ||
+        (simple_queue_validate_permission(
             SIMPLE_QUEUE_PERMISSION_ADD_NODES_SAME_ROLES_QUEUES)
         && simple_queue_validate_queue_same_roles($queue->roles)))) {   
         
@@ -993,7 +996,6 @@ function simple_queue_save_queue_order($nodes, $qid) {
   $count = 1;
   ksort($nodes);
   
-  //drupal_alter('simple_queue_sort', $nodes);
   foreach ($nodes as $pos => $node) {
     if (!is_numeric($node['nid']) || $node['nid'] < 1) {
       return 'Invalid nid value. New queue order not saved.';
@@ -1052,34 +1054,21 @@ function simple_queue_save_queue_order($nodes, $qid) {
 }
 
 /**
- * Validate function for the simple_queue_arrange_queue form.
- * 
- * @param 
- *   array $form Allow access to the form.
- * 
- * @param
- *   array $form_state Allow access to the form.
- * 
- * @author  
+ * Validator handler for add action on simple_queue_arrange_queue form.
+ *
+ * @author
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_arrange_queue_form_add_validate($form, &$form_state) {
-  // Validate textfield add when textfield is void.
-  if (empty($form_state['values']['add']['nid']) ||
-      ($form_state['values']['add']['nid'] === 
-      t('Enter the title of a node to add it to the queue'))) {
-    form_set_error('Node title', t('Please enter a title for the node.'));
-  }  
-  
-  // Validate textfield add when textfield is wrong data.
+
+  // Validates textfield add when textfield is wrong data.
   if (!empty($form_state['values']['add']['nid'])) {
     $matches = array();
-    preg_match('/\[nid: (\d+)\]$/', $form_state['values']['add']['nid'],
-        $matches);
-
+    preg_match('/\[nid: (\d+)\]$/', $form_state['values']['add']['nid'], $matches);
     $nid = empty($matches) ? $matches : $matches[1];
+
     if (empty($nid)) {
-      form_set_error('', t('Please enter a valid node title.'));
+      form_set_error('nid', t('Please enter a valid node.'));
     }
   }
 }

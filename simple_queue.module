@@ -442,14 +442,14 @@ function simple_queue_load_queues_by_type($type, $account = NULL, $bypass_cache 
  *  Boolean value indicating whether to bypass the cache or not.
  * 
  * @return $qids
- *   An array in the format: @code { array($qid 
- *   => array('qid' => $qid, 'show_in_tab' '
- *   => true/false, 'show_in_links' => true/false }
+ *   An array in the format: @code {
+ *    array($qid => array('qid' => $qid, 'show_in_tab' => true/false, 'show_in_links' => true/false }
  * 
  * @author  
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_get_qids($type, $account = NULL, $bypass_cache = FALSE) {
+
   if (!isset($account)) {
     global $user;
     $account = $user;
@@ -503,6 +503,7 @@ function simple_queue_get_qids($type, $account = NULL, $bypass_cache = FALSE) {
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_load_queues($qids = array(), $bypass_cache = FALSE) {
+
   static $cache = array();
   $to_load = $loaded = array();
 
