@@ -681,6 +681,7 @@ function simple_queue_delete($qid) {
  *   Daniel Anzawa daniel@42mate.com.
  */
 function simple_queue_add_node($queue, $node) {
+
   if (!empty($node->nid)) {    
     $display = simple_queue_get_display_to_type($queue->types, $node->type);
     
@@ -692,18 +693,86 @@ function simple_queue_add_node($queue, $node) {
           . " 1), :time)", array(':qid' => $queue->qid, ':nid' => $node->nid,
             ':display' => $display, ':time' => REQUEST_TIME));
     } 
-    else {      
-      db_update('simple_queue_nodes')
-        ->expression('position', 'position + 1')
-        ->condition('simple_queue_nodes.qid', $queue->qid)
-        ->execute();    
-      
-      db_query("INSERT INTO {simple_queue_nodes} (qid, nid, display, position,"
-          . " timestamp) VALUES (:qid, :nid, :display, 1, :time)", array(':qid'
-            => $queue->qid, ':nid' => $node->nid, ':display' => $display,
-            ':time' => REQUEST_TIME));
-    }    
-    
+    else {
+
+      $locked_qty = db_query("SELECT nid, position, locked FROM {simple_queue_nodes}
+        WHERE qid = :qid ORDER BY POSITION", array(':qid' => $queue->qid))->fetchAll();
+
+      $locked_positions = array();
+      $standard_positions = array();
+
+      $std_pos = 1;
+      foreach ($locked_qty as $key_lck => $elem_lck) {
+        if ($elem_lck->locked) {
+          $locked_positions[(int) $elem_lck->position] = $elem_lck;
+        }
+        else {
+          $standard_positions[$std_pos] = $elem_lck;
+          $std_pos++;
+        }
+      }
+
+      if (count($locked_positions) == 0) {
+
+        $update_res = db_update('simple_queue_nodes')
+          ->expression('position', 'position + 1')
+          ->condition('simple_queue_nodes.qid', $queue->qid)
+          ->execute();
+
+        $query_res = db_query("INSERT INTO {simple_queue_nodes} (qid, nid, display, position, timestamp)
+          VALUES (:qid, :nid, :display, 1, :time)",
+          array(':qid' => $queue->qid, ':nid' => $node->nid, ':display' => $display, ':time' => REQUEST_TIME));
+
+      }
+      else {
+        $new_elem = new stdClass();
+        $new_elem->nid = $node->nid;
+        array_unshift($standard_positions, $new_elem);
+
+        $new_index = 1;
+        reset($standard_positions);
+        reset($locked_positions);
+
+        while (key($standard_positions) !== NULL) {
+
+          if (empty($locked_positions[$new_index])) {
+            $locked_positions[$new_index] = current($standard_positions);
+          }
+          else {
+            $find_next_index = TRUE;
+            while ($find_next_index) {
+
+              $new_index++;
+
+              if (empty($locked_positions[$new_index])) {
+                $locked_positions[$new_index] = current($standard_positions);
+                $find_next_index = FALSE;
+                break;
+              }
+            }
+          }
+          next($standard_positions);
+          $new_index++;
+        }
+        ksort($locked_positions);
+
+        foreach ($locked_positions as $k_item => $val_item) {
+          if ($node->nid == $val_item->nid) {
+            $query_res = db_query("INSERT INTO {simple_queue_nodes} (qid, nid, display, position, timestamp) " .
+              " VALUES (:qid, :nid, :display, $k_item, :time)",
+              array(':qid' => $queue->qid, ':nid' => $node->nid, ':display' => $display, ':time' => REQUEST_TIME));
+          }
+          else {
+            db_update('simple_queue_nodes')
+              ->fields(array('position' => $k_item))
+              ->condition('nid', $val_item->nid)
+              ->execute();
+          }
+        }
+      }
+
+    }
+
     $queue->count = db_query("SELECT COUNT(nid) FROM {simple_queue_nodes}"
         . " WHERE qid = :qid", array(':qid' => $queue->qid))->fetchField();
     // If adding this would make the queue too big, pop the front node
