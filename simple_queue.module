@@ -297,8 +297,10 @@ function simple_queue_element_info() {
     '#input'         => TRUE,
     '#delta'         => 10,
     '#default_value' => 0,
-    '#process'       => array('simple_queue_process_position',
-      'ajax_process_form'),
+    '#process'       => array(
+      'simple_queue_process_position',
+      'ajax_process_form'
+    ),
   );
 
   return $type;
