@@ -1824,14 +1824,29 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
   }
   
   if (empty($rows)) {
-    $rows[] = array(array('data' => t('No nodes in this queue.'),
-      'colspan' => 9));
+    $rows[] = array(
+      array(
+        'data' => t('No nodes in this queue.'),
+        'colspan' => 9
+      )
+    );
   }
 
   // Render the main simple_queue table.  
-  $header = array(t('Title'), t('Status'), t('Create date'), t('Type'),
-    t('Locked'), t('Display'), t('Position'), array('data' => t('Actions'),
-      'colspan' => 2), t('Position'));
+  $header = array(
+    t('Title'), 
+    t('Status'), 
+    t('Create date'), 
+    t('Type'),
+    t('Locked'), 
+    t('Display'), 
+    t('Position'), 
+      array(
+        'data' => t('Actions'),
+        'colspan' => 2
+      ), 
+    t('Position')
+  );
   
   $output .= theme('table', array('header' => $header, 'rows' => $rows,
     'attributes' => array('id' => $table_id, 'class' => $table_classes)));
