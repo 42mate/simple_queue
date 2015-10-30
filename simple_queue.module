@@ -1848,8 +1848,15 @@ function theme_simple_queue_arrange_queue_form_table($variables) {
     t('Position')
   );
   
-  $output .= theme('table', array('header' => $header, 'rows' => $rows,
-    'attributes' => array('id' => $table_id, 'class' => $table_classes)));
+  $output .= theme('table', array(
+    'header' => $header, 
+    'rows' => $rows,
+    'attributes' => array(
+        'id' => $table_id, 
+        'class' => $table_classes
+      )
+    )
+  );
   
   return $output;
 }
