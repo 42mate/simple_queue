@@ -86,6 +86,7 @@ function simple_queue_permission() {
  */
 function simple_queue_menu() { 
   $items = array();
+
   // administrative items.
   $items['admin/structure/simple_queue'] = array(
     'title' => 'Simple queues',
@@ -138,7 +139,7 @@ function simple_queue_menu() {
     'weight' => 5,
     'type' => MENU_LOCAL_TASK,
   );
-  // Actual administrative items.
+
   $items['admin/structure/simple_queue/%simple_queue/edit'] = array(
     'title' => 'Edit queue',
     'description' => 'Edit the queue.',
@@ -161,7 +162,7 @@ function simple_queue_menu() {
     'weight' => 5,
     'type' => MENU_CALLBACK,
   );  
-  // Administrative items for an individual queue.
+
   $items['admin/structure/simple_queue/%simple_queue'] = array(
     'page callback' => 'simple_queue_nodes_list',
     'page arguments' => array(3),
@@ -211,7 +212,7 @@ function simple_queue_block_info() {
   foreach ($qids as $qid) {
     $queue = simple_queue_load($qid);
     $blocks['sq_' . $qid] = array(
-      'info' => 'Simple Queue - "' . $queue->title . '"',
+      'info' => "Simple Queue - $queue->title",
       'cache' => $queue->block_cache,
     );
   }
